@@ -1,0 +1,11 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["backend/tests"],
+  "python.analysis.extraPaths": ["backend"],
+  "editor.formatOnSave": false,
+  "files.exclude": { "**/__pycache__": true, "**/.pytest_cache": true },
+  "files.eol": "\n",
+  "[javascript]": { "editor.tabSize": 2 },
+  "[python]": { "editor.tabSize": 4 }
+}

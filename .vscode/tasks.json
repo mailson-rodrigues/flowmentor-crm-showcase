@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup: criar venv e instalar dependências",
+      "type": "shell",
+      "command": "python -m venv .venv; .\\.venv\\Scripts\\python.exe -m pip install -U pip; .\\.venv\\Scripts\\python.exe -m pip install -r requirements-dev.txt",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Rodar servidor (dev)",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Rodar testes",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m pytest -q",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Migrações: alembic upgrade head",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m alembic upgrade head",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Flowmentor CRM — Teste do frontend</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/test/test.css">
+</head>
+<body class="tp">
+  <header class="tp-head">
+    <div>
+      <h1>Teste do frontend</h1>
+      <p>Valida a SPA contra a API em execução: assets, módulos, renderização de cada página por perfil, RBAC, tempo real (Socket.IO),
+         XSS, acessibilidade básica e utilitários de UI. Execute apenas contra ambientes de homologação/desenvolvimento.</p>
+    </div>
+    <div class="tp-actions">
+      <button id="theme" class="btn" type="button">Tema</button>
+    </div>
+  </header>
+
+  <main class="tp-main">
+    <section class="tp-card" aria-labelledby="cfg">
+      <h2 id="cfg">Configuração</h2>
+      <div class="tp-grid">
+        <label>Senha dos usuários de demonstração
+          <input id="password" type="password" autocomplete="off" placeholder="senha dos usuários listados abaixo">
+        </label>
+        <label>Usuários por perfil (um por linha: perfil=e-mail)
+          <textarea id="roles" rows="6" spellcheck="false">admin=admin@flowmentor.com.br
+supervisor=supervisor@flowmentor.com.br
+consultor=consultor@flowmentor.com.br
+agent=atendente1@flowmentor.com.br
+auditor=auditor@flowmentor.com.br</textarea>
+        </label>
+      </div>
+      <div class="tp-opts">
+        <label><input type="checkbox" id="opt-realtime" checked> Testar tempo real (exige worker ativo e <code>META_MODE=sandbox</code>)</label>
+        <label><input type="checkbox" id="opt-write" checked> Testes que gravam dados (cria/exclui uma conta de teste)</label>
+      </div>
+      <p class="tp-note">As credenciais ficam apenas em memória. A sessão atual do CRM neste navegador é salva e restaurada ao final.</p>
+      <div class="tp-run">
+        <button id="run" class="btn primary" type="button">Executar todos os testes</button>
+        <button id="export" class="btn" type="button" disabled>Exportar JSON</button>
+        <label class="tp-filter"><input type="checkbox" id="only-fail"> Mostrar só falhas/avisos</label>
+        <a class="btn ghost" href="/">Abrir o CRM</a>
+      </div>
+    </section>
+
+    <section id="summary" class="tp-summary" hidden aria-live="polite"></section>
+    <section id="results" class="tp-results" aria-label="Resultados"></section>
+    <section class="tp-card" id="sandbox-wrap" hidden>
+      <h2>Páginas renderizadas (amostra)</h2>
+      <p class="tp-note">Última renderização feita pelo teste, no próprio documento de teste (o CRM não pode ser embutido em iframe: <code>frame-ancestors 'none'</code>).</p>
+      <div id="sandbox" class="tp-sandbox"></div>
+    </section>
+  </main>
+  <script src="/static/vendor/socket.io.min.js"></script>
+  <script type="module" src="/static/test/runner.js"></script>
+</body>
+</html>

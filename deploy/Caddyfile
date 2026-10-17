@@ -1,0 +1,12 @@
+{$DOMAIN:localhost} {
+	encode zstd gzip
+	# TLS 1.3 apenas; certificados emitidos automaticamente
+	tls {
+		protocols tls1.3
+	}
+	# WebSocket (Socket.IO) e API no mesmo upstream
+	reverse_proxy api:8000 {
+		header_up X-Forwarded-For {remote_host}
+		flush_interval -1
+	}
+}
