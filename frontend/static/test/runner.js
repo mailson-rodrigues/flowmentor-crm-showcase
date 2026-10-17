@@ -1,4 +1,4 @@
-// Executor da página de teste do frontend. Importa os mesmos módulos da SPA (instância única) e os exercita contra a API real.
+// Runner for the frontend test page. Imports the same SPA modules (single instance) and exercises them against the real API.
 import { api, auth } from "/static/js/lib/api.js";
 import { h, money, mount } from "/static/js/lib/dom.js";
 import { can, canAny, setSession, applyTheme, toggleTheme } from "/static/js/lib/store.js";
@@ -11,7 +11,7 @@ const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 applyTheme();
 
-// Perfis × rotas visíveis esperadas (independente do código da SPA; fonte: backend/app/security/rbac.py).
+// Roles × expected visible routes (independent of the SPA code; source: backend/app/security/rbac.py).
 const COMMON = ["/dashboard", "/pipeline", "/accounts", "/contacts", "/products", "/cases", "/contracts"];
 const EXPECTED = {
   admin: [...COMMON, "/inbox", "/supervisor", "/templates", "/analytics", "/integrations", "/compliance", "/settings"],
@@ -20,7 +20,7 @@ const EXPECTED = {
   agent: [...COMMON, "/inbox", "/templates"],
   auditor: [...COMMON, "/analytics", "/compliance"],
 };
-// Endpoint que o servidor deve negar quando a rota está oculta para o perfil.
+// Endpoint the server must deny when the route is hidden for the role.
 const ROUTE_API = {
   "/pipeline": "/api/v1/deals/board", "/inbox": "/api/v1/tickets", "/supervisor": "/api/v1/supervisor/live", "/templates": "/api/v1/templates",
   "/analytics": "/api/v1/kpis/overview", "/integrations": "/api/v1/webhooks/endpoints", "/compliance": "/api/v1/lgpd/audit-logs",
@@ -68,7 +68,7 @@ async function test(name, fn) {
 const suite = (name) => { currentSuite = name; };
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
 
-// Observa erros de console, exceções e respostas HTTP >= 400 durante `fn`.
+// Watches console errors, exceptions and HTTP responses >= 400 while `fn` runs.
 async function watched(fn) {
   const errs = [], bad = [];
   const origErr = console.error, origFetch = window.fetch;
@@ -100,7 +100,7 @@ async function asUser(email, password) {
   return me;
 }
 
-// Renderiza uma página da SPA (mesmo contrato do router) em um contêiner de teste.
+// Renders an SPA page (same contract as the router) in a test container.
 async function renderRoute(route, { params = {}, query = {} } = {}) {
   const box = h("div", { class: "content", id: "content" });
   const cleanups = [];
@@ -108,12 +108,12 @@ async function renderRoute(route, { params = {}, query = {} } = {}) {
   const mod = await route.page();
   const node = await mod.default(ctx);
   mount(box, node);
-  await sleep(700); // páginas que completam o desenho após o primeiro render
+  await sleep(700); // pages that finish drawing after the first render
   return { box, done: () => cleanups.forEach((f) => { try { f(); } catch { /* noop */ } }) };
 }
 
 function a11yIssues(root) {
-  enhance(root); // mesmo passe que o app aplica em tempo de execução (main.js → startA11y)
+  enhance(root); // same pass the app applies at runtime (main.js → startA11y)
   const issues = [];
   const named = (el) => (el.textContent || "").trim() || el.getAttribute("aria-label") || el.getAttribute("title") || el.getAttribute("aria-labelledby");
   root.querySelectorAll("button").forEach((b) => { if (!named(b)) issues.push("botão sem nome acessível"); });
@@ -164,7 +164,7 @@ async function runAll() {
       await test(`Módulo da página ${r.path} importa sem erro`, async () => { const m = await r.page(); assert(typeof m.default === "function", "sem export default"); });
     }
 
-    // ---- 2. Utilitários de UI
+    // ---- 2. UI utilities
     suite("2. Utilitários de UI");
     await test("DOM helper escapa HTML (sem XSS por construção)", async () => {
       const el = h("div", "<img src=x onerror=window.__xss=1>"); assert(!el.querySelector("img") && el.textContent.includes("<img"), "HTML interpretado"); assert(!window.__xss, "script executou");
@@ -182,7 +182,7 @@ async function runAll() {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); await sleep(30); assert(!document.querySelector('.modal[role="dialog"]'), "Esc não fechou");
     });
 
-    // ---- 3. Autenticação
+    // ---- 3. Authentication
     suite("3. Autenticação e sessão");
     const adminEmail = roles.admin || Object.values(roles)[0];
     await test("Senha incorreta → 401 com mensagem", async () => {
@@ -204,7 +204,7 @@ async function runAll() {
       assert(r.status === 401, `refresh ainda válido (HTTP ${r.status})`);
     });
 
-    // ---- 4. Dados de apoio (só leitura)
+    // ---- 4. Reference data (read-only)
     let accountId = null, ticketId = null;
     suite("4. Páginas por perfil (RBAC + renderização)");
     for (const [role, email] of Object.entries(roles)) {
@@ -236,7 +236,7 @@ async function runAll() {
       }
     }
 
-    // ---- 5. Páginas de detalhe
+    // ---- 5. Detail pages
     suite("5. Páginas de detalhe");
     await asUser(roles.admin || Object.values(roles)[0], password);
     const detail = ROUTES.find((r) => r.path === "/accounts/:id"), inbox = ROUTES.find((r) => r.path === "/inbox/:id");

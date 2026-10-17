@@ -1,4 +1,4 @@
-"""Módulo Operacional (Projetos/Casos) e Contratos & Faturamento."""
+"""Operations module (Projects/Cases) and Contracts & Billing."""
 from __future__ import annotations
 
 import enum
@@ -30,9 +30,9 @@ class Contract(UUIDPk, Timestamps, Base):
     billing_day: Mapped[int] = mapped_column(default=5)
     billing_period: Mapped[str] = mapped_column(sa.String(10), default="monthly")  # monthly|yearly|once
     next_billing_date: Mapped[date | None] = mapped_column(sa.Date)
-    hours_contracted: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), default=0)  # banco de horas
-    hourly_rate: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), default=300)  # hora técnica excedente/avulsa
-    exams_contracted: Mapped[int] = mapped_column(default=0)  # volume de exames
+    hours_contracted: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), default=0)  # hour bank
+    hourly_rate: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), default=300)  # extra/ad-hoc technical hour
+    exams_contracted: Mapped[int] = mapped_column(default=0)  # exam volume
     auto_renew: Mapped[bool] = mapped_column(default=False)
     terms: Mapped[str | None] = mapped_column(sa.Text)
 
@@ -62,10 +62,10 @@ class Invoice(UUIDPk, Timestamps, Base):
 
 
 class CaseType(str, enum.Enum):
-    consultoria = "consultoria"          # Consultoria técnica de processos e qualidade
-    apoio_diagnostico = "apoio_diagnostico"  # Apoio diagnóstico remoto & laudos
-    canal_medico = "canal_medico"        # Canal médico & discussão multidisciplinar
-    capacitacao = "capacitacao"          # Capacitação técnica & treinamentos
+    consultoria = "consultoria"          # Technical consulting on processes and quality
+    apoio_diagnostico = "apoio_diagnostico"  # Remote diagnostic support & reports
+    canal_medico = "canal_medico"        # Medical channel & multidisciplinary discussion
+    capacitacao = "capacitacao"          # Technical training & courses
 
 
 class CaseStatus(str, enum.Enum):
@@ -97,7 +97,7 @@ class Case(UUIDPk, Timestamps, Base):
     priority: Mapped[str] = mapped_column(sa.String(10), default="normal")  # low|normal|high|urgent
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(sa.ForeignKey("users.id", ondelete="SET NULL"))
     hours_contracted: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), default=0)
-    hours_consumed: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), default=0)  # denormalizado dos lançamentos
+    hours_consumed: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), default=0)  # denormalized from the entries
     due_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     sla_due_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     sla_breached_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
@@ -108,7 +108,7 @@ class Case(UUIDPk, Timestamps, Base):
 
 
 class CaseTimeEntry(UUIDPk, Base):
-    """Horas técnicas consumidas (base para cobrança por hora e controle de banco de horas)."""
+    """Consumed technical hours (basis for hourly billing and hour-bank control)."""
 
     __tablename__ = "case_time_entries"
 
@@ -119,12 +119,12 @@ class CaseTimeEntry(UUIDPk, Base):
     hours: Mapped[Decimal] = mapped_column(sa.Numeric(6, 2))
     description: Mapped[str | None] = mapped_column(sa.String(300))
     billable: Mapped[bool] = mapped_column(default=True)
-    invoice_id: Mapped[uuid.UUID | None] = mapped_column(sa.Uuid)  # preenchido ao faturar por consumo
+    invoice_id: Mapped[uuid.UUID | None] = mapped_column(sa.Uuid)  # filled in when billing by consumption
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 
 class CaseReport(UUIDPk, Timestamps, Base):
-    """Laudos / entregas técnicas (processamento de .FCS e emissão de laudo de alta complexidade)."""
+    """Technical reports / deliverables (.FCS processing and issuing high-complexity reports)."""
 
     __tablename__ = "case_reports"
     __table_args__ = (sa.Index("idx_reports_org_status", "organization_id", "status"),)
@@ -132,7 +132,7 @@ class CaseReport(UUIDPk, Timestamps, Base):
     organization_id: Mapped[uuid.UUID] = mapped_column(sa.Uuid)
     case_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey("cases.id", ondelete="CASCADE"), index=True)
     exam_code: Mapped[str] = mapped_column(sa.String(60))  # identificador externo (LIS)
-    panel: Mapped[str | None] = mapped_column(sa.String(120))  # painel imunofenotípico
+    panel: Mapped[str | None] = mapped_column(sa.String(120))  # immunophenotyping panel
     urgency: Mapped[str] = mapped_column(sa.String(10), default="routine")  # routine|urgent
     status: Mapped[str] = mapped_column(sa.String(20), default="received")  # received|processing|in_review|issued|rejected
     fcs_media_id: Mapped[uuid.UUID | None] = mapped_column(sa.Uuid)

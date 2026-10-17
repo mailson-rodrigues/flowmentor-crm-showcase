@@ -1,9 +1,9 @@
-"""Worker dedicado (produção): consome o barramento (Redis Streams) e executa jobs/tarefas periódicas.
+"""Dedicated worker (production): consumes the bus (Redis Streams) and runs jobs/periodic tasks.
 
     python -m app.worker
 
-Escale horizontalmente: consumer groups distribuem eventos entre instâncias; jobs usam FOR UPDATE SKIP LOCKED.
-Para o Socket.IO funcionar entre processos, configure um message manager (Redis) — ver docs/ARQUITETURA.md.
+Scale horizontally: consumer groups distribute events across instances; jobs use FOR UPDATE SKIP LOCKED.
+For Socket.IO to work across processes, configure a message manager (Redis) — see docs/ARCHITECTURE.md.
 """
 from __future__ import annotations
 

@@ -1,13 +1,13 @@
-"""Fixtures: SQLite em memória (padrão), barramento em memória, Meta em sandbox e Argon2 barato.
+"""Fixtures: in-memory SQLite (default), in-memory bus, Meta in sandbox and cheap Argon2.
 
-Overrides por variável de ambiente (ex.: validar contra PostgreSQL/Redis reais):
-  TEST_DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/flowmentor_test  (o schema é recriado/dropado a cada teste!)
-  TEST_REDIS_URL=redis://localhost:6379/15  (habilita os testes do RedisStreamsBus)
+Environment-variable overrides (e.g. to validate against real PostgreSQL/Redis):
+  TEST_DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/flowmentor_test  (the schema is recreated/dropped on every test!)
+  TEST_REDIS_URL=redis://localhost:6379/15  (enables the RedisStreamsBus tests)
 """
 import os
 import secrets
 
-PASSWORD = secrets.token_urlsafe(16)  # senha efêmera dos usuários de demonstração (gerada a cada execução dos testes)
+PASSWORD = secrets.token_urlsafe(16)  # ephemeral password of the demo users (generated on every test run)
 ADMIN_PASSWORD = secrets.token_urlsafe(16)
 
 os.environ.update({

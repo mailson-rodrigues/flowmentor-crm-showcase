@@ -1,4 +1,4 @@
-# Flowmentor CRM — imagem única (API + frontend estático). O worker usa a mesma imagem com outro comando.
+# Flowmentor CRM — single image (API + static frontend). The worker uses the same image with a different command.
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
@@ -17,5 +17,5 @@ WORKDIR /srv/backend
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -fs http://localhost:8000/api/health || exit 1
 
-# Aplica migrações e sobe a API. TLS é terminado no proxy reverso (Caddy/Nginx/ALB).
+# Applies migrations and starts the API. TLS is terminated at the reverse proxy (Caddy/Nginx/ALB).
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_CONCURRENCY:-2} --proxy-headers --forwarded-allow-ips='*'"]

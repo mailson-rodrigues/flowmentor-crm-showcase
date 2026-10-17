@@ -1,4 +1,4 @@
-"""Pipeline CRM: catálogo de produtos, oportunidades (kanban/tabela), itens, descontos, propostas."""
+"""Pipeline CRM: product catalog, deals (kanban/table), items, discounts, proposals."""
 from __future__ import annotations
 
 import uuid
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api/v1", tags=["Pipeline CRM"])
 public_router = APIRouter(tags=["Propostas (link público assinado)"])
 
 
-# ------------------------------------------------------------------ Catálogo
+# ------------------------------------------------------------------ Catalog
 class ProductIn(BaseModel):
     sku: str = Field(min_length=2, max_length=50)
     name: str = Field(min_length=2, max_length=150)
@@ -122,7 +122,7 @@ def deal_out(d: Deal, with_items: bool = True) -> dict:
 
 def _deal_scope(p: Principal, stmt):
     stmt = stmt.where(Deal.organization_id == p.org_id)
-    if not p.can("deals:all") and p.user_id:  # ABAC: vendedor só enxerga o que é seu (ou sem responsável)
+    if not p.can("deals:all") and p.user_id:  # ABAC: a salesperson only sees what is theirs (or unassigned)
         stmt = stmt.where(sa.or_(Deal.assigned_user_id == p.user_id, Deal.assigned_user_id.is_(None)))
     return stmt
 

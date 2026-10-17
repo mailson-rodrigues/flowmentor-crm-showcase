@@ -1,4 +1,4 @@
-// Cliente HTTP: Bearer JWT, refresh automático com rotação e erros padronizados.
+// HTTP client: Bearer JWT, automatic refresh with rotation and standardized errors.
 const KEY = "fm_auth";
 let refreshing = null;
 
@@ -8,7 +8,7 @@ export class ApiError extends Error {
 
 export const auth = {
   get() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } },
-  set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch { /* storage indisponível */ } },
+  set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch { /* storage unavailable */ } },
   clear() { try { localStorage.removeItem(KEY); } catch { /* noop */ } },
 };
 

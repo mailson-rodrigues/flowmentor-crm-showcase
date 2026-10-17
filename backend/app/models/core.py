@@ -1,4 +1,4 @@
-"""Core / Cadastros: organizações (tenants), usuários, departamentos, contatos, contas institucionais."""
+"""Core / Registries: organizations (tenants), users, departments, contacts, institutional accounts."""
 from __future__ import annotations
 
 import enum
@@ -68,7 +68,7 @@ class RefreshToken(UUIDPk, Base):
 
 
 class ApiKey(UUIDPk, Base):
-    """Chaves da Open API (integrações machine-to-machine)."""
+    """Open API keys (machine-to-machine integrations)."""
 
     __tablename__ = "api_keys"
 
@@ -92,7 +92,7 @@ class Department(UUIDPk, Base):
     sla_solution_seconds: Mapped[int] = mapped_column(default=3600)
     routing_strategy: Mapped[str] = mapped_column(sa.String(20), default="least_busy")  # round_robin|least_busy|skill_based
     required_skills: Mapped[list] = mapped_column(JSONType, default=list)
-    business_hours: Mapped[dict | None] = mapped_column(JSONType)  # None = herda da organização
+    business_hours: Mapped[dict | None] = mapped_column(JSONType)  # None = inherits from the organization
     after_hours_message: Mapped[str | None] = mapped_column(sa.Text)
     is_default: Mapped[bool] = mapped_column(default=False)
     rr_last_user_id: Mapped[uuid.UUID | None] = mapped_column(sa.Uuid)
@@ -100,13 +100,13 @@ class Department(UUIDPk, Base):
 
 
 class Contact(UUIDPk, Base):
-    """Pessoa física que fala pelo WhatsApp (prescritor, médico, responsável técnico, lead)."""
+    """Individual who talks over WhatsApp (prescriber, physician, technical lead, lead)."""
 
     __tablename__ = "contacts"
     __table_args__ = (sa.UniqueConstraint("organization_id", "wa_id", name="uq_contact_org_wa"),)
 
     organization_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True)
-    wa_id: Mapped[str] = mapped_column(sa.String(50), nullable=False)  # E.164 sem '+'
+    wa_id: Mapped[str] = mapped_column(sa.String(50), nullable=False)  # E.164 without '+'
     name: Mapped[str | None] = mapped_column(sa.String(150))
     email: Mapped[str | None] = mapped_column(sa.String(150))
     job_title: Mapped[str | None] = mapped_column(sa.String(100))
@@ -128,7 +128,7 @@ class AccountType(str, enum.Enum):
 
 
 class Account(UUIDPk, Timestamps, Base):
-    """Conta institucional B2B de saúde (hospitais, laboratórios, clínicas...)."""
+    """Institutional B2B healthcare account (hospitals, laboratories, clinics...)."""
 
     __tablename__ = "accounts"
 
@@ -143,7 +143,7 @@ class Account(UUIDPk, Timestamps, Base):
     city: Mapped[str | None] = mapped_column(sa.String(80))
     state: Mapped[str | None] = mapped_column(sa.String(2))
     segment: Mapped[str | None] = mapped_column(sa.String(80))
-    institutional_discount_pct: Mapped[float] = mapped_column(sa.Numeric(5, 2), default=0)  # desconto institucional padrão
+    institutional_discount_pct: Mapped[float] = mapped_column(sa.Numeric(5, 2), default=0)  # default institutional discount
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(sa.ForeignKey("users.id", ondelete="SET NULL"))
     tags: Mapped[list] = mapped_column(JSONType, default=list)
     notes: Mapped[str | None] = mapped_column(sa.Text)

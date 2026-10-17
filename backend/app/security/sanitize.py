@@ -1,4 +1,4 @@
-"""Sanitização de conteúdo vindo de terceiros (mensagens do WhatsApp, formulários)."""
+"""Sanitization of third-party content (WhatsApp messages, forms)."""
 from __future__ import annotations
 
 import html
@@ -11,7 +11,7 @@ _JS_URL = re.compile(r"(?i)\b(javascript|vbscript|data)\s*:")
 
 
 def sanitize_text(value: str | None, max_len: int = 8000) -> str | None:
-    """Remove caracteres de controle, blocos ativos e tags; o front-end ainda usa textContent."""
+    """Removes control characters, active blocks and tags; the front end still uses textContent."""
     if value is None:
         return None
     value = _CTRL.sub("", value)

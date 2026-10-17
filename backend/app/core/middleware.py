@@ -1,4 +1,4 @@
-"""Middlewares: cabeçalhos de segurança, request-id, rate limiting."""
+"""Middlewares: security headers, request-id, rate limiting."""
 from __future__ import annotations
 
 import time
@@ -37,9 +37,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         h["X-Frame-Options"] = "DENY"
         h["Referrer-Policy"] = "strict-origin-when-cross-origin"
         h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
-        h["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"  # permite popup do Embedded Signup
+        h["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"  # allows the Embedded Signup popup
         h["Cross-Origin-Resource-Policy"] = "same-site"
-        # O Swagger (/docs) usa CDN; mantém CSP estrita nas demais rotas.
+        # Swagger (/docs) uses a CDN; keep a strict CSP on the other routes.
         if not request.url.path.startswith(("/docs", "/redoc", "/openapi")):
             h["Content-Security-Policy"] = CSP
         if settings.enable_hsts or settings.is_prod:
@@ -47,7 +47,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/api/"):
             h["Cache-Control"] = "no-store"
         elif request.url.path.startswith("/static/"):
-            h["Cache-Control"] = "no-cache"  # revalida por ETag: após um deploy o navegador não serve JS/CSS antigos
+            h["Cache-Control"] = "no-cache"  # revalidate by ETag: after a deploy the browser does not serve stale JS/CSS
         return response
 
 
@@ -59,7 +59,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             is_auth = path.startswith("/api/v1/auth/")
             limit = settings.rate_limit_auth_per_minute if is_auth else settings.rate_limit_per_minute
             if path.startswith("/webhooks/"):
-                limit = settings.rate_limit_per_minute * 20  # Meta pode enviar rajadas; autenticação é por assinatura HMAC
+                limit = settings.rate_limit_per_minute * 20  # Meta may send bursts; authentication is by HMAC signature
             ok, remaining = await limiter.hit(f"{'auth' if is_auth else 'api'}:{ip}", limit)
             if not ok:
                 return JSONResponse(

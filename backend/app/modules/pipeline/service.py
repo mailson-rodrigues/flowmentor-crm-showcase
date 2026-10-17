@@ -1,4 +1,4 @@
-"""Regras de negócio do Pipeline: totais, desconto institucional, transição de estágios."""
+"""Pipeline business rules: totals, institutional discount, stage transitions."""
 from __future__ import annotations
 
 import uuid
@@ -37,7 +37,7 @@ def recalc_deal(deal: Deal) -> None:
 
 
 async def suggest_discount(session: AsyncSession, org_id: uuid.UUID, deal: Deal) -> dict:
-    """Desconto institucional automático: maior entre a faixa por valor e o desconto negociado na conta."""
+    """Automatic institutional discount: the greater of the value-based tier and the discount negotiated on the account."""
     org = await session.get(Organization, org_id)
     cfg = effective_settings(org.settings)["discount"]
     subtotal = float(deal_subtotal(deal))

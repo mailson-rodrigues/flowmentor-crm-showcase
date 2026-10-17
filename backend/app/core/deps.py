@@ -1,4 +1,4 @@
-"""Dependências FastAPI: autenticação (JWT ou API Key), RBAC e escopo multi-tenant."""
+"""FastAPI dependencies: authentication (JWT or API key), RBAC and multi-tenant scoping."""
 from __future__ import annotations
 
 import hashlib
@@ -73,7 +73,7 @@ async def get_principal(
 
 
 def require(*permissions: str):
-    """Exige TODAS as permissões listadas."""
+    """Requires ALL the listed permissions."""
 
     async def _dep(p: Principal = Depends(get_principal)) -> Principal:
         for perm in permissions:

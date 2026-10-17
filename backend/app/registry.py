@@ -1,4 +1,4 @@
-"""Registro central: assina os consumidores no barramento e carrega tarefas periódicas/jobs."""
+"""Central registry: subscribes the consumers to the bus and loads periodic tasks/jobs."""
 from __future__ import annotations
 
 from app.core.events import EventBus

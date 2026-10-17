@@ -1,8 +1,8 @@
-"""Smoke ponta a ponta contra uma stack em execução (API + worker + PostgreSQL + Redis Streams, Meta em sandbox).
+"""End-to-end smoke test against a running stack (API + worker + PostgreSQL + Redis Streams, Meta in sandbox).
 
-    DEMO_USER_PASSWORD=<senha> META_APP_SECRET=<segredo> python scripts/live_smoke.py [http://localhost:8000]
+    DEMO_USER_PASSWORD=<password> META_APP_SECRET=<secret> python scripts/live_smoke.py [http://localhost:8000]
 
-Exige os dados de demonstração (SEED_DEMO_DATA=true). O processamento é assíncrono (worker), então o script faz polling.
+Requires the demo data (SEED_DEMO_DATA=true). Processing is asynchronous (worker), so the script polls.
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def inbound(**kw) -> None:
              "contacts": [{"profile": {"name": "Dra. Smoke"}, "wa_id": WA}], "messages": [msg]}
     body = json.dumps({"object": "whatsapp_business_account", "entry": [{"id": "100000000000001", "changes": [{"field": "messages", "value": value}]}]}).encode()
     headers = {"Content-Type": "application/json"}
-    secret = os.environ.get("META_APP_SECRET")  # a API em produção exige X-Hub-Signature-256
+    secret = os.environ.get("META_APP_SECRET")  # the production API requires X-Hub-Signature-256
     if secret:
         headers["X-Hub-Signature-256"] = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     r = http.post("/webhooks/whatsapp", content=body, headers=headers)

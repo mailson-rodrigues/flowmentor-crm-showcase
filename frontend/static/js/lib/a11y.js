@@ -1,5 +1,5 @@
-// Acessibilidade transversal: dá nome acessível a controles montados dinamicamente (botões só com ícone, filtros sem <label>).
-// Roda em um MutationObserver leve; não altera controles que já tenham nome.
+// Cross-cutting accessibility: gives an accessible name to dynamically mounted controls (icon-only buttons, filters without <label>).
+// Runs in a lightweight MutationObserver; does not touch controls that already have a name.
 const ICON_NAME = {
   edit: "Editar", trash: "Excluir", plus: "Adicionar", x: "Fechar", more: "Mais ações", send: "Enviar", paperclip: "Anexar arquivo", search: "Buscar", refresh: "Atualizar",
   download: "Baixar", check: "Confirmar", key: "Chave de API", link: "Copiar link", eye: "Visualizar", zap: "Assumir conversa", whisper: "Sussurrar", lock: "Bloqueado",

@@ -1,4 +1,4 @@
-// Bootstrap: tema, sessão, shell (sidebar/topbar), roteamento e eventos em tempo real.
+// Bootstrap: theme, session, shell (sidebar/topbar), routing and real-time events.
 import { api, auth } from "./lib/api.js";
 import { h, icon, mount, clear, avatar } from "./lib/dom.js";
 import { state, can, canAny, setSession, applyTheme, toggleTheme, ROLE_LABEL } from "./lib/store.js";

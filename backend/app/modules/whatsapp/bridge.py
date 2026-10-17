@@ -1,4 +1,4 @@
-"""Bridge WhatsApp ↔ CRM: associa o número à Conta/Lead, alimenta a timeline unificada e fecha o ciclo comercial."""
+"""WhatsApp ↔ CRM bridge: links the number to the Account/Lead, feeds the unified timeline and closes the sales loop."""
 from __future__ import annotations
 
 import uuid
@@ -30,7 +30,7 @@ async def on_ticket_created(event: Event) -> None:
             primary = next((l for l in links if l.is_primary), links[0])
             account = await s.get(Account, primary.account_id)
         elif cfg.get("crm", {}).get("auto_create_leads", True):
-            # número desconhecido → cria Lead (conta prospect + oportunidade em lead_inbound)
+            # unknown number → creates a Lead (prospect account + deal in lead_inbound)
             label = c.name or f"Contato {mask_phone(c.wa_id)}"
             account = Account(organization_id=org_id, corporate_name=f"Lead — {label}", status="prospect", segment="Lead WhatsApp", tags=["lead-whatsapp"])
             s.add(account)
@@ -53,7 +53,7 @@ async def on_ticket_created(event: Event) -> None:
 
 
 async def on_ticket_closed(event: Event) -> None:
-    """Resumo (LLM) no fechamento + registro na timeline da conta."""
+    """LLM summary on closing + entry in the account timeline."""
     from app.modules.whatsapp import llm
 
     org_id, tid = uuid.UUID(event.org_id), uuid.UUID(event.payload["ticket_id"])
@@ -83,7 +83,7 @@ async def on_survey_answered(event: Event) -> None:
 
 
 async def on_contact_linked(event: Event) -> None:
-    """Contato vinculado manualmente a uma conta → reassocia lead automático (evita duplicidade)."""
+    """Contact manually linked to an account → re-associates the automatic lead (avoids duplicates)."""
     ticket_id = event.payload.get("ticket_id")
     if not ticket_id:
         return

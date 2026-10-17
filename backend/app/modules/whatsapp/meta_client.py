@@ -1,8 +1,8 @@
-"""Cliente da WhatsApp Cloud API / Graph API (Meta).
+"""WhatsApp Cloud API / Graph API (Meta) client.
 
-* ``live``    → chamadas reais ao Graph API.
-* ``sandbox`` → não toca a Meta: devolve identificadores plausíveis (wamid fictício) para desenvolvimento,
-                demonstração e testes automatizados. O restante do sistema é idêntico nos dois modos.
+* ``live``    → real calls to the Graph API.
+* ``sandbox`` → does not touch Meta: returns plausible identifiers (fake wamid) for development,
+                demos and automated tests. The rest of the system is identical in both modes.
 """
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ class MetaClient:
 
     # ---------------------------------------------------------------- mensagens
     async def send_message(self, to: str, payload: dict) -> str:
-        """``payload`` já no formato da Cloud API (type + corpo). Retorna o wamid."""
+        """``payload`` already in Cloud API format (type + body). Returns the wamid."""
         body = {"messaging_product": "whatsapp", "recipient_type": "individual", "to": to, **payload}
         if not self.live:
             log.info("[sandbox] send_message to=%s type=%s", to[-4:], payload.get("type"))
@@ -90,7 +90,7 @@ class MetaClient:
 
     async def send_interactive_list(self, to: str, body: str, button_label: str, rows: list[dict], section_title: str = "Opções", header: str | None = None,
                                     footer: str | None = None) -> str:
-        """``rows``: [{"id","title","description"?}] — no máximo 10 linhas (limite da Meta)."""
+        """``rows``: [{"id","title","description"?}] — at most 10 rows (Meta limit)."""
         inter: dict[str, Any] = {"type": "list", "body": {"text": body[:1024]},
                                  "action": {"button": button_label[:20], "sections": [{"title": section_title[:24], "rows": [
                                      {"id": r["id"][:200], "title": r["title"][:24], **({"description": r["description"][:72]} if r.get("description") else {})} for r in rows[:10]]}]}}
@@ -108,7 +108,7 @@ class MetaClient:
             body["typing_indicator"] = {"type": "text"}
         await self._request("POST", f"{self.phone_number_id}/messages", json=body)
 
-    # ---------------------------------------------------------------- mídia
+    # ---------------------------------------------------------------- media
     async def get_media_url(self, media_id: str) -> dict:
         if not self.live:
             return {"url": f"sandbox://{media_id}", "mime_type": "application/octet-stream", "file_size": 0}
@@ -148,7 +148,7 @@ class MetaClient:
 
     # ---------------------------------------------------------------- onboarding / contas
     async def exchange_code(self, code: str) -> dict:
-        """Embedded Signup: troca o ``code`` do Facebook Login por um business token."""
+        """Embedded Signup: exchanges the Facebook Login ``code`` for a business token."""
         if not self.live:
             return {"access_token": f"SANDBOX_TOKEN_{uuid.uuid4().hex}", "expires_in": 5184000}
         return await self._request("GET", "oauth/access_token", params={"client_id": settings.meta_app_id, "client_secret": settings.meta_app_secret, "code": code})

@@ -1,4 +1,4 @@
-"""Motor de roteamento: Round-Robin, Menor Carga (Least Busy) e Skill-based, com afinidade de agente (sticky)."""
+"""Routing engine: Round-Robin, Least Busy and Skill-based, with sticky agent affinity."""
 from __future__ import annotations
 
 import uuid
@@ -46,7 +46,7 @@ async def pick_agent(session: AsyncSession, ticket: Ticket, dept: Department | N
     candidates = [u for u in await candidate_agents(session, ticket.organization_id, dept) if loads.get(u.id, 0) < (u.max_concurrent_chats or 5) and u.id not in (exclude or set())]
     if not candidates:
         return None
-    # 1) afinidade: mesmo agente que atendeu este contato recentemente
+    # 1) affinity: the same agent who recently served this contact
     sticky_h = cfg.get("sticky_agent_hours", 0)
     if sticky_h:
         last = (await session.execute(
@@ -68,7 +68,7 @@ async def pick_agent(session: AsyncSession, ticket: Ticket, dept: Department | N
         nxt = next((u for u in ordered if last_id is None or str(u.id) > str(last_id)), ordered[0])
         dept.rr_last_user_id = nxt.id
         return nxt
-    # least_busy (padrão) — empate: quem está há mais tempo livre
+    # least_busy (default) — tie-break: whoever has been free the longest
     return sorted(candidates, key=lambda u: (loads.get(u.id, 0), u.status_changed_at or utcnow()))[0]
 
 
@@ -81,7 +81,7 @@ async def dispatch_queue(session: AsyncSession, org_id: uuid.UUID, department_id
     prio = sa.case((Ticket.priority == "urgent", 0), (Ticket.priority == "high", 1), (Ticket.priority == "normal", 2), else_=3)
     q = q.order_by(prio, Ticket.queued_at.asc().nulls_last(), Ticket.created_at).limit(limit)
     if session.bind.dialect.name == "postgresql":
-        q = q.with_for_update(skip_locked=True, of=Ticket)  # `of`: o LEFT JOIN de contact não pode ser bloqueado no PostgreSQL
+        q = q.with_for_update(skip_locked=True, of=Ticket)  # `of`: the contact LEFT JOIN must not be locked on PostgreSQL
     tickets = (await session.execute(q)).scalars().all()
     if not tickets:
         return 0
@@ -99,7 +99,7 @@ async def dispatch_queue(session: AsyncSession, org_id: uuid.UUID, department_id
 
 
 async def on_capacity_event(event) -> None:
-    """Chamado em: agente ficou disponível, ticket fechado/resolvido, ticket enfileirado/transferido."""
+    """Called when: an agent becomes available, a ticket is closed/resolved, a ticket is queued/transferred."""
     if event.org_id is None:
         return
     if event.type == "agent.status_changed" and event.payload.get("status") != "available":

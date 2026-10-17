@@ -1,4 +1,4 @@
-"""Engine async, sessão e tipos portáveis (PostgreSQL em produção, SQLite em dev/testes)."""
+"""Async engine, session and portable types (PostgreSQL in production, SQLite in dev/tests)."""
 from __future__ import annotations
 
 import enum
@@ -21,7 +21,7 @@ def utcnow() -> datetime:
 
 
 class UTCDateTime(sa.types.TypeDecorator):
-    """DateTime com timezone que sempre devolve datetimes aware em UTC (inclusive no SQLite)."""
+    """Timezone-aware DateTime that always returns aware UTC datetimes (including on SQLite)."""
 
     impl = sa.DateTime(timezone=True)
     cache_ok = True
@@ -45,7 +45,7 @@ JSONType = sa.JSON().with_variant(JSONB(), "postgresql")
 
 
 def enum_col(py_enum: type[enum.Enum], name: str) -> sa.Enum:
-    """Enum nativo no PostgreSQL (como no DDL de referência) e VARCHAR+CHECK no SQLite."""
+    """Native enum on PostgreSQL (as in the reference DDL) and VARCHAR+CHECK on SQLite."""
     return sa.Enum(py_enum, name=name, values_callable=lambda e: [m.value for m in e], native_enum=True)
 
 
@@ -82,14 +82,14 @@ async def _run_after_commit(session: AsyncSession) -> None:
     for hook in hooks:
         try:
             await hook()
-        except Exception:  # hooks (ex.: publicar evento) nunca devem derrubar a requisição
+        except Exception:  # hooks (e.g. publishing an event) must never take the request down
             import logging
 
             logging.getLogger("flowmentor.db").exception("after_commit hook falhou")
 
 
 def after_commit(session: AsyncSession, hook) -> None:
-    """Agenda uma corrotina para rodar somente após o commit bem-sucedido (outbox simplificado)."""
+    """Schedules a coroutine to run only after a successful commit (simplified outbox)."""
     session.info.setdefault("after_commit", []).append(hook)
 
 
@@ -106,7 +106,7 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 
 @asynccontextmanager
 async def session_scope() -> AsyncIterator[AsyncSession]:
-    """Unidade de trabalho para workers/jobs (fora do ciclo request/response)."""
+    """Unit of work for workers/jobs (outside the request/response cycle)."""
     async with SessionLocal() as session:
         try:
             yield session
@@ -118,7 +118,7 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
 
 
 async def init_models() -> None:
-    """Cria o schema (dev/test). Em produção use `alembic upgrade head`."""
+    """Creates the schema (dev/test). In production use `alembic upgrade head`."""
     import app.models  # noqa: F401  (registra os mapeamentos)
 
     async with engine.begin() as conn:

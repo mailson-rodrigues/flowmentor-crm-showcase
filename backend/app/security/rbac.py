@@ -1,4 +1,4 @@
-"""RBAC (perfis → permissões) e helpers ABAC (atributos do recurso)."""
+"""RBAC (roles → permissions) and ABAC helpers (resource attributes)."""
 from __future__ import annotations
 
 from enum import StrEnum
@@ -7,7 +7,7 @@ from enum import StrEnum
 class Role(StrEnum):
     ADMIN = "admin"
     SUPERVISOR = "supervisor"      # Supervisor Comercial / Operacional
-    CONSULTOR = "consultor"        # Consultor Técnico
+    CONSULTOR = "consultor"        # Technical Consultant
     AGENT = "agent"                # Atendente / Operador
     AUDITOR = "auditor"            # Auditor / DPO
     BOT = "bot"
@@ -71,7 +71,7 @@ def can_access_ticket(role: str, user_id, user_department_ids: set, ticket) -> b
         return False
     if ticket.assigned_agent_id == user_id:
         return True
-    # tickets na fila dos departamentos do usuário (ou sem departamento) ficam visíveis p/ assumir
+    # tickets in the queue of the user's departments (or without a department) are visible so they can be taken
     if ticket.assigned_agent_id is None and (ticket.department_id is None or ticket.department_id in user_department_ids):
         return True
     return False

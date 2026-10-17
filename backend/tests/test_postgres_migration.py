@@ -1,5 +1,6 @@
-"""Valida o schema criado pelo Alembic no PostgreSQL real (partições de `messages`, enums nativos, audit_logs append-only).
-Só roda com TEST_DATABASE_URL apontando para um PostgreSQL descartável."""
+"""Validates the schema created by Alembic on a real PostgreSQL (`messages` partitions, native enums, append-only audit_logs).
+
+Only runs with TEST_DATABASE_URL pointing to a disposable PostgreSQL."""
 import os
 import subprocess
 import sys
@@ -44,7 +45,7 @@ async def test_alembic_schema_and_app_on_postgres():
             enums = {r[0] for r in (await conn.execute(sa.text("select typname from pg_type where typtype='e'"))).all()}
             assert {"ticket_status", "message_status", "deal_stage"} <= enums
 
-        # job diário de partições: idempotente e estende a janela (hoje -1 .. +6 meses = 8 partições mensais)
+        # daily partition job: idempotent and extends the window (today -1 .. +6 months = 8 monthly partitions)
         async def monthly() -> int:
             async with engine.connect() as conn:
                 return (await conn.execute(sa.text("select count(*) from pg_tables where tablename ~ '^messages_[0-9]{4}_[0-9]{2}$'"))).scalar()
@@ -73,7 +74,7 @@ async def test_alembic_schema_and_app_on_postgres():
             rows = (await conn.execute(sa.text("select tableoid::regclass::text, count(*) from messages group by 1"))).all()
             assert rows and sum(n for _, n in rows) >= 2 and all(t.startswith("messages_") for t, _ in rows)
 
-        # audit_logs: append-only (UPDATE/DELETE/TRUNCATE bloqueados por trigger)
+        # audit_logs: append-only (UPDATE/DELETE/TRUNCATE blocked by trigger)
         async with SessionLocal() as s:
             assert (await s.execute(sa.text("select count(*) from audit_logs"))).scalar() > 0
         for stmt in ("update audit_logs set action='x'", "delete from audit_logs", "truncate audit_logs"):

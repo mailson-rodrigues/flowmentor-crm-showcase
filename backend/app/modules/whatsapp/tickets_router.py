@@ -1,4 +1,4 @@
-"""Mesa de atendimento (Agent Workspace): tickets, mensagens, notas internas, transferência, encerramento."""
+"""Service desk (Agent Workspace): tickets, messages, internal notes, transfer, closing."""
 from __future__ import annotations
 
 import uuid
@@ -121,7 +121,7 @@ class SendIn(BaseModel):
 
 
 async def _auto_claim(session: AsyncSession, t: Ticket, p: Principal) -> None:
-    """Atendente que responde um ticket da fila (ou do bot) o assume automaticamente."""
+    """An agent who replies to a ticket in the queue (or with the bot) automatically takes it over."""
     if t.assigned_agent_id is None and p.user:
         await svc.assign(session, t, p.user, p.user_id, reason="claimed_on_reply")
 
@@ -176,7 +176,7 @@ class StartIn(BaseModel):
 
 @router.post("/outbound", status_code=201)
 async def start_outbound(body: StartIn, p: Principal = Depends(require("inbox:use")), session: AsyncSession = Depends(get_session)):
-    """Conversa ativa iniciada pela empresa (fora da janela de 24h) — exige template aprovado."""
+    """Company-initiated conversation (outside the 24h window) — requires an approved template."""
     c = await session.get(Contact, body.contact_id)
     if not c or c.organization_id != p.org_id:
         raise not_found("Contato")
@@ -201,7 +201,7 @@ class NoteIn(BaseModel):
 
 @router.post("/{ticket_id}/notes", status_code=201)
 async def add_note(ticket_id: uuid.UUID, body: NoteIn, p: Principal = Depends(require("inbox:use")), session: AsyncSession = Depends(get_session)):
-    """Nota interna — nunca é enviada ao cliente."""
+    """Internal note — never sent to the customer."""
     t = await get_ticket(session, p, ticket_id)
     n = TicketNote(ticket_id=t.id, organization_id=p.org_id, author_id=p.user_id, kind="note", body=sanitize_text(body.body, 4000))
     session.add(n)
@@ -212,7 +212,7 @@ async def add_note(ticket_id: uuid.UUID, body: NoteIn, p: Principal = Depends(re
 
 
 class AssignIn(BaseModel):
-    agent_id: uuid.UUID | None = None  # None = assumir para mim
+    agent_id: uuid.UUID | None = None  # None = assign to me
 
 
 @router.post("/{ticket_id}/assign")
@@ -245,7 +245,7 @@ class TransferIn(BaseModel):
 async def transfer_ticket(ticket_id: uuid.UUID, body: TransferIn, request: Request, p: Principal = Depends(require("inbox:transfer")), session: AsyncSession = Depends(get_session)):
     t = await get_ticket(session, p, ticket_id, write=True)
     await svc.transfer(session, t, by_user_id=p.user_id, department_id=body.department_id, agent_id=body.agent_id, reason=sanitize_text(body.reason, 300))
-    if body.reason:  # nota interna preserva o contexto da passagem de bastão
+    if body.reason:  # internal note preserves the context of the handover
         session.add(TicketNote(ticket_id=t.id, organization_id=p.org_id, author_id=p.user_id, kind="note", body=f"↪ Transferido: {sanitize_text(body.reason, 300)}"))
     await audit.log_action(session, org_id=p.org_id, action="TRANSFER_TICKET", resource_type="tickets", resource_id=t.id, actor_user_id=p.user_id, request=request,
                            new_state={"department_id": str(body.department_id), "agent_id": str(body.agent_id)})
@@ -314,7 +314,7 @@ async def mark_read(ticket_id: uuid.UUID, p: Principal = Depends(require("inbox:
     if last and t.assigned_agent_id == p.user_id:
         client, _ = await client_for(session, t)
         try:
-            await client.mark_read(last)  # envia "lido" (tiques azuis) ao cliente
+            await client.mark_read(last)  # sends "read" (blue ticks) to the customer
         except Exception:  # noqa: BLE001
             pass
 
@@ -341,7 +341,7 @@ class LinkIn(BaseModel):
 
 @router.post("/{ticket_id}/link-account")
 async def link_account(ticket_id: uuid.UUID, body: LinkIn, p: Principal = Depends(require("inbox:use")), session: AsyncSession = Depends(get_session)):
-    """Associa manualmente o número do WhatsApp a uma Conta institucional do CRM."""
+    """Manually links the WhatsApp number to an institutional CRM Account."""
     from app.models import Account, AccountContact
 
     t = await get_ticket(session, p, ticket_id)

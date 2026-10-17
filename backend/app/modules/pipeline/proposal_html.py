@@ -1,4 +1,4 @@
-"""Renderização da proposta contratual em HTML imprimível (CSS externo por causa da CSP estrita)."""
+"""Renders the contract proposal as printable HTML (external CSS because of the strict CSP)."""
 from __future__ import annotations
 
 from jinja2 import Environment, select_autoescape

@@ -1,4 +1,4 @@
-"""Helpers de serialização com mascaramento de PII conforme permissões do principal."""
+"""Serialization helpers with PII masking according to the permissions of the principal."""
 from __future__ import annotations
 
 import enum

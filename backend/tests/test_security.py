@@ -15,7 +15,7 @@ def test_envelope_encryption_roundtrip_and_rotation(monkeypatch):
     token = crypto.encrypt("12345678000190")
     assert token.startswith("enc:v1:") and "12345678000190" not in token
     assert crypto.decrypt(token) == "12345678000190"
-    assert crypto.encrypt("12345678000190") != token  # DEK/nonce aleatórios a cada valor
+    assert crypto.encrypt("12345678000190") != token  # random DEK/nonce for every value
     old = crypto.provider()
     k2 = base64.urlsafe_b64encode(os.urandom(32)).decode()
     dev = base64.urlsafe_b64encode(old.keys["dev"]).decode()

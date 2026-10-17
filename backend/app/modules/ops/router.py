@@ -1,4 +1,4 @@
-"""Módulo Operacional (Casos/Projetos, horas, laudos) e Contratos & Faturamento."""
+"""Operations module (Cases/Projects, hours, reports) and Contracts & Billing."""
 from __future__ import annotations
 
 import uuid
@@ -436,7 +436,7 @@ async def pay_invoice(invoice_id: uuid.UUID, body: PayIn, request: Request, p: P
 
 @router.post("/contracts/{contract_id}/invoice-from-usage", status_code=201)
 async def invoice_from_usage(contract_id: uuid.UUID, p: Principal = Depends(require("contracts:write")), session: AsyncSession = Depends(get_session)):
-    """Fatura as horas técnicas faturáveis ainda não cobradas (hora técnica ref. R$ 300,00)."""
+    """Bills the billable technical hours not yet charged (reference technical hour: BRL 300.00)."""
     c = await session.get(Contract, contract_id)
     if not c or c.organization_id != p.org_id:
         raise not_found("Contrato")
@@ -448,7 +448,7 @@ async def invoice_from_usage(contract_id: uuid.UUID, p: Principal = Depends(requ
     billable_hours = hours
     if c.modality == "hourly" or not c.hours_contracted:
         pass
-    else:  # banco de horas: só excedente
+    else:  # hour bank: only the excess
         used_before = (await session.execute(sa.select(sa.func.coalesce(sa.func.sum(CaseTimeEntry.hours), 0)).join(Case, Case.id == CaseTimeEntry.case_id).where(
             Case.contract_id == c.id, CaseTimeEntry.invoice_id.is_not(None)))).scalar_one()
         free_left = max(Decimal(str(c.hours_contracted)) - Decimal(str(used_before)), Decimal("0"))
@@ -457,7 +457,7 @@ async def invoice_from_usage(contract_id: uuid.UUID, p: Principal = Depends(requ
     amount = (billable_hours * rate).quantize(Decimal("0.01"))
     if amount <= 0:
         for e in entries:
-            e.invoice_id = c.id  # marca como consumidas dentro do banco de horas
+            e.invoice_id = c.id  # mark as consumed within the hour bank
         return {"message": "Horas dentro do banco de horas contratado; nada a faturar.", "hours": float(hours)}
     inv = await create_invoice(session, p.org_id, account_id=c.account_id, contract_id=c.id, amount=amount, due_date=date.today() + timedelta(days=30),
                                description=f"Horas técnicas ({billable_hours}h x R$ {rate})", reference_period=date.today().strftime("%Y-%m"), actor_id=p.user_id)
@@ -467,7 +467,7 @@ async def invoice_from_usage(contract_id: uuid.UUID, p: Principal = Depends(requ
 
 
 async def run_billing_cycle() -> dict:
-    """Tarefa diária: gera faturas recorrentes vencidas e marca atrasadas."""
+    """Daily task: generates overdue recurring invoices and flags late ones."""
     from app.db import session_scope
 
     generated = overdue = 0

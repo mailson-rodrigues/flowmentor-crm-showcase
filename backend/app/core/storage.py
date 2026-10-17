@@ -1,7 +1,7 @@
-"""Armazenamento de objetos (mídias) — binários ficam fora do banco relacional.
+"""Object storage (media) — binaries stay outside the relational database.
 
-* LocalStorage: dev/test. URLs assinadas por HMAC com expiração, servidas por ``/media/...``.
-* S3Storage: produção (S3 / GCS interoperável / MinIO). URLs pré-assinadas nativas com expiração.
+* LocalStorage: dev/test. HMAC-signed URLs with expiry, served by ``/media/...``.
+* S3Storage: production (S3 / GCS interoperable / MinIO). Native pre-signed URLs with expiry.
 """
 from __future__ import annotations
 

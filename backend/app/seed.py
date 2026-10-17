@@ -1,4 +1,4 @@
-"""Seed: organização inicial, usuário admin, departamentos, catálogo Flowmentor e (opcional) dados de demonstração."""
+"""Seed: initial organization, admin user, departments, Flowmentor catalog and (optionally) demo data."""
 from __future__ import annotations
 
 import logging
@@ -42,7 +42,7 @@ CATALOG = [
 
 async def bootstrap() -> None:
     async with session_scope() as s:
-        if s.bind.dialect.name == "postgresql":  # vários workers/réplicas sobem juntos: serializa o seed inicial
+        if s.bind.dialect.name == "postgresql":  # several workers/replicas start together: serializes the initial seed
             await s.execute(sa.text("SELECT pg_advisory_xact_lock(hashtext('flowmentor:bootstrap'))"))
         org = (await s.execute(sa.select(Organization).limit(1))).scalar_one_or_none()
         if org is not None:

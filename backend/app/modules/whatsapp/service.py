@@ -1,4 +1,4 @@
-"""Serviço de atendimento: ciclo de vida do ticket, mensagens, SLA e eventos (fonte única das regras)."""
+"""Customer service layer: ticket lifecycle, messages, SLA and events (single source of the rules)."""
 from __future__ import annotations
 
 import uuid
@@ -18,10 +18,10 @@ from app.models import (
 from app.modules.core.defaults import effective_settings
 from app.security.sanitize import sanitize_text
 
-WINDOW = timedelta(hours=24)  # janela de atendimento da Cloud API (mensagens livres)
+WINDOW = timedelta(hours=24)  # Cloud API customer-service window (free-form messages)
 
 
-# ---------------------------------------------------------------- serialização
+# ---------------------------------------------------------------- serialization
 def message_out(m: Message) -> dict:
     return row(m, ["id", "ticket_id", "meta_message_id", "direction", "sender_user_id", "is_bot", "type", "body", "media_asset_id", "payload", "status", "error", "created_at", "delivered_at", "read_at"])
 
@@ -66,7 +66,7 @@ def ticket_event_payload(t: Ticket) -> dict:
             "preview": t.last_message_preview, "unread": t.unread_count, "contact_name": t.contact.name if t.contact else None}
 
 
-# ---------------------------------------------------------------- eventos / histórico
+# ---------------------------------------------------------------- events / history
 async def log_event(session: AsyncSession, t: Ticket, type_: str, user_id: uuid.UUID | None = None, prev: Any = None, new: Any = None, meta: dict | None = None) -> None:
     session.add(TicketEvent(ticket_id=t.id, user_id=user_id, event_type=type_, previous_value=str(prev) if prev is not None else None,
                             new_value=str(new) if new is not None else None, meta=meta))
@@ -77,7 +77,7 @@ async def org_cfg(session: AsyncSession, org_id: uuid.UUID) -> dict:
     return effective_settings(org.settings)
 
 
-# ---------------------------------------------------------------- criação / localização
+# ---------------------------------------------------------------- creation / lookup
 async def find_open_ticket(session: AsyncSession, org_id: uuid.UUID, contact_id: uuid.UUID) -> Ticket | None:
     return (await session.execute(
         sa.select(Ticket).where(Ticket.organization_id == org_id, Ticket.contact_id == contact_id, Ticket.status.in_(list(OPEN_STATUSES) + [TicketStatus.resolved]))
@@ -144,7 +144,7 @@ async def add_message(session: AsyncSession, t: Ticket, *, direction: MessageDir
 
 async def queue_outbound(session: AsyncSession, t: Ticket, *, body: str | None, type_: MessageType = MessageType.text, sender_user_id: uuid.UUID | None = None, is_bot: bool = False,
                          payload: dict | None = None, media_asset_id: uuid.UUID | None = None, enforce_window: bool = True) -> Message:
-    """Registra a mensagem de saída (status ``queued``) e dispara o envio assíncrono via barramento."""
+    """Records the outbound message (status ``queued``) and triggers the asynchronous send via the bus."""
     if t.contact and t.contact.opted_out_at:
         raise AppError(409, "contact_opted_out", "Contato solicitou não receber mensagens (opt-out)")
     if t.contact and t.contact.anonymized_at:
@@ -171,7 +171,7 @@ async def register_human_response(session: AsyncSession, t: Ticket, user_id: uui
         emit(session, "ticket.first_response", t.organization_id, {"ticket_id": str(t.id), "seconds": t.first_response_time_seconds, "agent_id": str(user_id)})
 
 
-# ---------------------------------------------------------------- transições
+# ---------------------------------------------------------------- transitions
 async def set_status(session: AsyncSession, t: Ticket, new: TicketStatus, user_id: uuid.UUID | None = None, reason: str | None = None) -> None:
     old = t.status
     if old == new:
@@ -223,7 +223,7 @@ async def assign(session: AsyncSession, t: Ticket, agent: User | None, by_user_i
 
 
 async def transfer(session: AsyncSession, t: Ticket, *, by_user_id: uuid.UUID | None, department_id: uuid.UUID | None = None, agent_id: uuid.UUID | None = None, reason: str | None = None) -> None:
-    """Transfere entre departamentos/agentes mantendo todo o histórico (mesmo ticket, mesmas mensagens e notas)."""
+    """Transfers between departments/agents keeping the whole history (same ticket, same messages and notes)."""
     if not department_id and not agent_id:
         raise bad_request("Informe departamento ou agente de destino")
     prev_dept, prev_agent = t.department_id, t.assigned_agent_id
@@ -273,7 +273,7 @@ async def reopen_ticket(session: AsyncSession, t: Ticket, user_id: uuid.UUID | N
 
 
 async def mark_previous_not_fcr(session: AsyncSession, org_id: uuid.UUID, contact_id: uuid.UUID, within: timedelta = timedelta(hours=24)) -> Ticket | None:
-    """Cliente voltou em < 24h: o atendimento anterior deixa de contar como FCR."""
+    """Customer came back in < 24h: the previous conversation no longer counts as FCR."""
     prev = (await session.execute(
         sa.select(Ticket).where(Ticket.organization_id == org_id, Ticket.contact_id == contact_id, Ticket.status == TicketStatus.closed, Ticket.closed_at >= utcnow() - within)
         .order_by(Ticket.closed_at.desc()).limit(1))).scalar_one_or_none()

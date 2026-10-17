@@ -1,4 +1,4 @@
-"""Fluxo ponta a ponta: webhook → bot → handoff → roteamento → atendimento → transferência → fechamento → pesquisa → KPIs."""
+"""End-to-end flow: webhook → bot → handoff → routing → service → transfer → closing → survey → KPIs."""
 import hashlib
 import hmac
 import json
@@ -44,18 +44,18 @@ async def test_webhook_verification_and_signature(client, env, monkeypatch):
 
 
 async def test_full_support_lifecycle(client, env, admin, supervisor, consultor, agent1):
-    # configura pesquisa sem carência para o teste
+    # configure a survey without grace window for the test
     await client.put("/api/v1/org/settings", headers=admin, json={"settings": {"survey": {"grace_minutes": 0}}})
 
-    # 1) cliente escreve → ticket com bot + menu interativo
+    # 1) customer writes → ticket with bot + interactive menu
     await post_wa(client, env, text="Olá")
     t = (await tickets(client, supervisor, "bot"))[0]
-    assert t["status"] == "pending_bot" and t["contact"]["masked"] is False  # supervisor vê PII
+    assert t["status"] == "pending_bot" and t["contact"]["masked"] is False  # supervisor sees PII
     msgs = (await client.get(f"/api/v1/tickets/{t['id']}/messages", headers=supervisor)).json()["messages"]
     menu = [m for m in msgs if m["direction"] == "outbound"][0]
     assert menu["is_bot"] and menu["payload"]["kind"] == "list" and menu["status"] == "delivered"
 
-    # 2) idempotência: reentrega do mesmo wamid não duplica
+    # 2) idempotency: redelivery of the same wamid does not duplicate
     dup = meta_payload(text="repetida", wamid="wamid.DUPLICADA")
     for _ in range(2):
         await client.post("/webhooks/whatsapp", json=dup)
@@ -63,21 +63,21 @@ async def test_full_support_lifecycle(client, env, admin, supervisor, consultor,
     msgs = (await client.get(f"/api/v1/tickets/{t['id']}/messages", headers=supervisor)).json()["messages"]
     assert sum(1 for m in msgs if m["meta_message_id"] == "wamid.DUPLICADA") == 1
 
-    # 3) cliente escolhe "Laudos e diagnóstico" → handoff com resumo e skill, ticket vai para a fila
+    # 3) customer picks "Laudos e diagnóstico" (reports and diagnosis) → handoff with summary and skill, ticket goes to the queue
     await post_wa(client, env, selection=("menu:apoio_diagnostico", "Laudos e diagnóstico"))
     t = (await tickets(client, supervisor, "queue"))[0]
     assert t["status"] == "queued" and t["department_name"] == "Apoio Diagnóstico" and t["summary"] and not t["bot_active"]
     ev = (await client.get(f"/api/v1/tickets/{t['id']}/events", headers=supervisor)).json()["items"]
     assert any(e["event_type"] == "handoff" for e in ev)
 
-    # 4) atendimento com restrição ABAC: atendente1 só vê a fila do próprio departamento; consultor entra disponível → roteamento atribui
+    # 4) service with ABAC restriction: atendente1 only sees the queue of their own department; the consultant goes available → routing assigns
     await set_status(client, env, consultor, "available")
     mine = await tickets(client, consultor, "mine")
     assert len(mine) == 1 and mine[0]["status"] == "in_progress" and mine[0]["assigned_agent_id"]
     tid = mine[0]["id"]
-    assert (await client.get(f"/api/v1/tickets/{tid}", headers=consultor)).json()["contact"]["masked"] is True  # consultor não vê o telefone completo
+    assert (await client.get(f"/api/v1/tickets/{tid}", headers=consultor)).json()["contact"]["masked"] is True  # the consultant does not see the full phone number
 
-    # 5) consultor responde → FRT registrado; nota interna não vai ao cliente
+    # 5) the consultant replies → FRT recorded; internal note does not go to the customer
     r = await client.post(f"/api/v1/tickets/{tid}/messages", headers=consultor, json={"body": "Olá, Dra.! Vou analisar o caso agora."})
     assert r.status_code == 201
     await env.drain()
@@ -87,7 +87,7 @@ async def test_full_support_lifecycle(client, env, admin, supervisor, consultor,
     assert det["first_response_time_seconds"] is not None and det["first_response_at"]
     wamid = r.json()["meta_message_id"] or (await client.get(f"/api/v1/tickets/{tid}/messages", headers=consultor)).json()["messages"][-1]["meta_message_id"]
 
-    # 6) status "lido" vindo da Meta nunca regride e atualiza o front
+    # 6) "read" status coming from Meta never goes backwards and updates the front end
     await post_wa(client, env, status=(wamid, "read"))
     last = [m for m in (await client.get(f"/api/v1/tickets/{tid}/messages", headers=consultor)).json()["messages"] if m["id"] == r.json()["id"]][0]
     assert last["status"] == "read"
@@ -95,14 +95,14 @@ async def test_full_support_lifecycle(client, env, admin, supervisor, consultor,
     last = [m for m in (await client.get(f"/api/v1/tickets/{tid}/messages", headers=consultor)).json()["messages"] if m["id"] == r.json()["id"]][0]
     assert last["status"] == "read"
 
-    # 7) sussurro do supervisor é visível só ao agente; atendente comum não acessa o ticket do consultor
+    # 7) the supervisor's whisper is visible only to the agent; a regular agent cannot access the consultant's ticket
     w = await client.post(f"/api/v1/supervisor/tickets/{tid}/whisper", headers=supervisor, json={"body": "Priorize: cliente é paciente oncológico"})
     assert w.status_code == 201
     notes = (await client.get(f"/api/v1/tickets/{tid}/messages", headers=consultor)).json()["notes"]
     assert any(n["kind"] == "whisper" for n in notes) and any(n["kind"] == "note" for n in notes)
     assert (await client.get(f"/api/v1/tickets/{tid}", headers=agent1)).status_code == 403
 
-    # 8) transferência para Comercial mantendo histórico → atendente1 assume
+    # 8) transfer to Sales keeping the history → atendente1 takes over
     users = (await client.get("/api/v1/users", headers=supervisor)).json()["items"]
     agent1_id = next(u["id"] for u in users if u["email"] == "atendente1@flowmentor.com.br")
     tr = await client.post(f"/api/v1/tickets/{tid}/transfer", headers=consultor, json={"agent_id": agent1_id, "reason": "Cliente pediu proposta comercial"})
@@ -112,9 +112,9 @@ async def test_full_support_lifecycle(client, env, admin, supervisor, consultor,
     assert len(me1) == 1 and me1[0]["id"] == tid
     all_msgs = (await client.get(f"/api/v1/tickets/{tid}/messages", headers=agent1)).json()
     assert len(all_msgs["messages"]) >= 4 and any("Transferido" in n["body"] for n in all_msgs["notes"])
-    assert not any(n["kind"] == "whisper" for n in all_msgs["notes"])  # sussurro era do consultor
+    assert not any(n["kind"] == "whisper" for n in all_msgs["notes"])  # the whisper belonged to the consultant
 
-    # 9) atendente1 encerra → snapshot de métricas + pesquisa agendada
+    # 9) atendente1 closes → metrics snapshot + survey scheduled
     cl = await client.post(f"/api/v1/tickets/{tid}/close", headers=agent1)
     assert cl.status_code == 200 and cl.json()["status"] == "closed" and cl.json()["handling_time_seconds"] is not None and cl.json()["is_fcr"] is True
     await env.drain()
@@ -127,7 +127,7 @@ async def test_full_support_lifecycle(client, env, admin, supervisor, consultor,
         outs = (await s.execute(sa.select(Message).where(Message.ticket_id == survey.ticket_id, Message.is_bot.is_(True)).order_by(Message.created_at.desc()))).scalars().all()
         assert outs[0].payload["rows"][0]["id"] == f"svy:{sid}:5"
 
-    # 10) cliente avalia 5 pela lista e comenta → sentimento positivo; não abre novo ticket
+    # 10) customer rates 5 from the list and comments → positive sentiment; does not open a new ticket
     await post_wa(client, env, selection=(f"svy:{sid}:5", "5 - Excelente"))
     await post_wa(client, env, text="Atendimento excelente e muito rápido, obrigado!")
     async with session_scope() as s:
@@ -165,18 +165,18 @@ async def test_survey_suppression_and_late_answer(client, env, admin, consultor)
         sv = (await s.execute(sa.select(SatisfactionSurvey))).scalar_one()
         sid = sv.id
         assert sv.survey_type == "nps"
-    # NPS em duas etapas: faixa (botões) → nota exata (lista)
+    # two-step NPS: range (buttons) → exact score (list)
     await post_wa(client, env, selection=(f"svy:{sid}:r:9-10", "9 a 10"))
     await post_wa(client, env, selection=(f"svy:{sid}:9", "9"))
     await post_wa(client, env, text="pular")
     k = (await client.get("/api/v1/kpis/overview", headers=admin)).json()["quality"]
     assert k["nps"] == 100 and k["nps_promoters"] == 1
-    # novo ticket dentro de 24h → anterior deixa de contar como FCR
+    # new ticket within 24h → the previous one no longer counts as FCR
     await post_wa(client, env, text="Tenho outra dúvida")
     t2 = (await tickets(client, consultor, "mine"))[0]
     await client.post(f"/api/v1/tickets/{t2['id']}/close", headers=consultor)
     await env.drain()
-    await run_due_jobs()  # supressão: respondeu pesquisa há menos de 7 dias
+    await run_due_jobs()  # suppression: answered a survey less than 7 days ago
     await env.drain()
     async with session_scope() as s:
         assert len((await s.execute(sa.select(SatisfactionSurvey))).scalars().all()) == 1
@@ -187,7 +187,7 @@ async def test_opt_out_and_window_rules(client, env, admin, consultor):
     await set_status(client, env, consultor, "available")
     await post_wa(client, env, text="Olá, bom dia")
     t = (await tickets(client, consultor, "mine"))[0]
-    # template não aprovado não pode ser usado; texto livre dentro da janela de 24h é permitido
+    # an unapproved template cannot be used; free text inside the 24h window is allowed
     assert (await client.post(f"/api/v1/tickets/{t['id']}/messages", headers=consultor, json={"body": "Bom dia!"})).status_code == 201
     await post_wa(client, env, text="PARAR")
     after = await client.post(f"/api/v1/tickets/{t['id']}/messages", headers=consultor, json={"body": "Ainda aí?"})
@@ -227,4 +227,4 @@ async def test_supervisor_live_and_barge_in(client, env, admin, supervisor, cons
     assert b.status_code == 200 and b.json()["assigned_agent_id"] != live["tickets"][0]["assigned_agent_id"]
     from app.modules.whatsapp.supervisor import sla_monitor
 
-    await sla_monitor()  # não deve falhar nem duplicar alertas
+    await sla_monitor()  # must not fail or duplicate alerts

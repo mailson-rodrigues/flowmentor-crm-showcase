@@ -1,4 +1,4 @@
-"""Processamento assíncrono dos webhooks da Meta (consumidor de ``whatsapp.webhook.received``)."""
+"""Asynchronous processing of Meta webhooks (consumer of ``whatsapp.webhook.received``)."""
 from __future__ import annotations
 
 import logging
@@ -32,7 +32,7 @@ def _norm(s: str) -> str:
 
 
 def parse_message(msg: dict) -> dict:
-    """Normaliza o objeto de mensagem da Cloud API em (tipo, texto, seleção interativa, mídia)."""
+    """Normalizes the Cloud API message object into (type, text, interactive selection, media)."""
     mtype = msg.get("type", "text")
     out = {"type": MessageType.text, "body": None, "selection_id": None, "media": None, "payload": {}}
     if mtype == "text":
@@ -85,7 +85,7 @@ async def process_messages_value(value: dict) -> None:
         async with session_scope() as s:
             await apply_status(s, st["id"], st["status"], (st.get("errors") or [None])[0])
     for msg in value.get("messages", []):
-        async with session_scope() as s:  # transação por mensagem: uma falha não perde as demais
+        async with session_scope() as s:  # one transaction per message: a failure does not lose the others
             wa = await _account_by_phone(s, phone_number_id)
             if wa is None:
                 log.warning("webhook para phone_number_id desconhecido: %s", phone_number_id)
@@ -97,7 +97,7 @@ async def process_inbound(session: AsyncSession, wa: WhatsAppAccount, msg: dict,
     org_id = wa.organization_id
     wamid = msg["id"]
     if (await session.execute(sa.select(Message.id).where(Message.meta_message_id == wamid, Message.organization_id == org_id).limit(1))).first():
-        return None  # idempotência (Meta reentrega)
+        return None  # idempotency (Meta redelivers)
     parsed = parse_message(msg)
     wa_id = msg["from"]
     contact, created = await get_or_create_contact(session, org_id, wa_id, profile_name)
@@ -107,7 +107,7 @@ async def process_inbound(session: AsyncSession, wa: WhatsAppAccount, msg: dict,
     text, selection = parsed["body"], parsed["selection_id"]
     cfg = await svc.org_cfg(session, org_id)
 
-    # --- LGPD: opt-in implícito (iniciativa do titular) e opt-out por palavra-chave
+    # --- LGPD: implicit opt-in (initiative of the data subject) and keyword opt-out
     if created or not (await session.execute(sa.select(LgpdConsent.id).where(LgpdConsent.contact_id == contact.id, LgpdConsent.revoked_at.is_(None)).limit(1))).first():
         session.add(LgpdConsent(organization_id=org_id, contact_id=contact.id, legal_basis="Consentimento (Art. 7, I)", consent_source="whatsapp_optin",
                                 purpose="Atendimento, suporte e comunicações operacionais sobre serviços contratados via WhatsApp"))
@@ -124,7 +124,7 @@ async def process_inbound(session: AsyncSession, wa: WhatsAppAccount, msg: dict,
     if contact.opted_out_at:  # voltou a escrever → reativa
         contact.opted_out_at = None
 
-    # --- Pesquisa de satisfação: respostas não abrem ticket
+    # --- Satisfaction survey: replies do not open a ticket
     if await surveys.try_handle_reply(session, org_id, contact, selection_id=selection, text=text):
         return None
 
@@ -160,7 +160,7 @@ async def process_inbound(session: AsyncSession, wa: WhatsAppAccount, msg: dict,
 
 
 async def _after_hours_notice(session: AsyncSession, t: Ticket, cfg: dict) -> None:
-    """Contingência fora do expediente: avisa uma vez quando não há agente disponível."""
+    """Out-of-hours contingency: warns once when no agent is available."""
     if t.bot_context.get("after_hours_notified"):
         return
     from app.models import Department

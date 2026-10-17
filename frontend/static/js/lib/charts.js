@@ -1,4 +1,4 @@
-// Gráficos SVG leves (sem dependências, compatíveis com CSP estrita).
+// Lightweight SVG charts (no dependencies, compatible with a strict CSP).
 import { h, svg } from "./dom.js";
 
 export const COLORS = ["#0EA5E9", "#14B8A6", "#6366F1", "#F59E0B", "#EC4899", "#84CC16", "#F97316", "#8B5CF6"];

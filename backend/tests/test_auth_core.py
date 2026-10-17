@@ -10,7 +10,7 @@ async def test_login_refresh_rotation_and_reuse(client):
     assert body["user"]["role"] == "agent" and "pii:view" not in body["permissions"]
     r2 = await client.post("/api/v1/auth/refresh", json={"refresh_token": body["refresh_token"]})
     assert r2.status_code == 200
-    # reutilizar o refresh antigo = suspeita de roubo → revoga a família inteira
+    # reusing the old refresh token = suspected theft → revokes the whole family
     r3 = await client.post("/api/v1/auth/refresh", json={"refresh_token": body["refresh_token"]})
     assert r3.status_code == 401
     r4 = await client.post("/api/v1/auth/refresh", json={"refresh_token": r2.json()["refresh_token"]})

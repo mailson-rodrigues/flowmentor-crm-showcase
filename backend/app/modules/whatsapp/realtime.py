@@ -1,7 +1,7 @@
-"""Tempo real via Socket.IO: sincronização de mensagens, status, digitação, presença e alertas.
+"""Real time via Socket.IO: message sync, status, typing, presence and alerts.
 
-Salas:  ``user:{id}`` (notificações pessoais) · ``dept:{id}`` (fila do departamento) · ``sup:{org}`` (supervisores)
-        · ``ticket:{id}`` (conversa aberta — entrada validada por ABAC).
+Rooms:  ``user:{id}`` (personal notifications) · ``dept:{id}`` (department queue) · ``sup:{org}`` (supervisors)
+        · ``ticket:{id}`` (open conversation — entry validated by ABAC).
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from app.security.tokens import decode_access_token
 
 log = logging.getLogger("flowmentor.realtime")
 
-# Com Redis, vários workers/containers compartilham as salas e o processo `worker` consegue emitir para os clientes conectados na API.
+# With Redis, several workers/containers share the rooms and the `worker` process can emit to clients connected to the API.
 _manager = socketio.AsyncRedisManager(settings.redis_url) if settings.redis_url else None
 sio = socketio.AsyncServer(async_mode="asgi", client_manager=_manager, cors_allowed_origins=settings.cors_origins or [], logger=False, engineio_logger=False,
                            ping_interval=20, ping_timeout=25)
@@ -73,7 +73,7 @@ async def leave_ticket(sid, data=None, *_):
 
 @sio.event
 async def typing(sid, data=None, *_):
-    """Indicador de digitação entre atendentes/supervisores que observam o mesmo ticket."""
+    """Typing indicator between agents/supervisors watching the same ticket."""
     info = await sio.get_session(sid)
     data = data or {}
     room = f"ticket:{data.get('ticket_id')}"
@@ -99,7 +99,7 @@ async def _emit_many(event_name: str, rooms: list[str], data: dict) -> None:
 
 
 async def on_event(event: Event) -> None:
-    """Traduz eventos de domínio em pushes de Socket.IO."""
+    """Translates domain events into Socket.IO pushes."""
     t, p = event.type, {**event.payload, "org_id": event.org_id}
     if t == "message.created":
         ticket = p.get("ticket", {})

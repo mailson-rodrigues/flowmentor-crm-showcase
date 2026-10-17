@@ -1,8 +1,8 @@
-"""Jobs duráveis (tabela ``scheduled_jobs``) + tarefas periódicas.
+"""Durable jobs (``scheduled_jobs`` table) + periodic tasks.
 
-* ``schedule_job``: agenda execução futura com deduplicação (ex.: pesquisa de satisfação 3 min após fechar).
-* ``Scheduler.run``: laço que executa jobs vencidos e tarefas periódicas (SLA monitor, expiração de mídia...).
-Em múltiplos workers, os jobs são reivindicados com ``FOR UPDATE SKIP LOCKED`` (PostgreSQL).
+* ``schedule_job``: schedules a future run with deduplication (e.g. satisfaction survey 3 min after closing).
+* ``Scheduler.run``: loop that runs due jobs and periodic tasks (SLA monitor, media expiry...).
+With multiple workers, jobs are claimed with ``FOR UPDATE SKIP LOCKED`` (PostgreSQL).
 """
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ async def cancel_jobs(session: AsyncSession, dedupe_key: str) -> None:
 
 
 async def run_due_jobs(limit: int = 25) -> int:
-    """Executa jobs vencidos. Retorna quantos foram processados."""
+    """Runs due jobs. Returns how many were processed."""
     async with SessionLocal() as s:
         q = sa.select(ScheduledJob).where(ScheduledJob.status == "pending", ScheduledJob.run_at <= utcnow()).order_by(ScheduledJob.run_at).limit(limit)
         if s.bind.dialect.name == "postgresql":

@@ -1,4 +1,4 @@
-"""Automação híbrida (IA + humano): menu/FAQ do bot e orquestrador de transição (handoff) para atendentes."""
+"""Hybrid automation (AI + human): bot menu/FAQ and the handoff orchestrator to agents."""
 from __future__ import annotations
 
 import unicodedata
@@ -61,7 +61,7 @@ async def send_menu(session: AsyncSession, t: Ticket, cfg: dict, greeting: bool 
 
 
 async def handoff(session: AsyncSession, t: Ticket, intent: str, reason: str, confidence: float | None = None, user_text: str | None = None) -> None:
-    """Passa o atendimento do bot para a fila humana sem perder o contexto (resumo + departamento + skills)."""
+    """Hands the conversation from the bot to the human queue without losing context (summary + department + skills)."""
     cfg = await svc.org_cfg(session, t.organization_id)
     dept = await _find_department(session, t.organization_id, intent)
     if dept:
@@ -88,7 +88,7 @@ async def handoff(session: AsyncSession, t: Ticket, intent: str, reason: str, co
 
 
 async def handle_inbound(session: AsyncSession, t: Ticket, m: Message, selection_id: str | None, cfg: dict) -> None:
-    """Processa mensagem do cliente enquanto o ticket está sob responsabilidade do bot."""
+    """Processes a customer message while the ticket is under the bot's responsibility."""
     ctx = dict(t.bot_context or {})
     turns = int(ctx.get("turns", 0))
     ctx["turns"] = turns + 1
@@ -96,7 +96,7 @@ async def handle_inbound(session: AsyncSession, t: Ticket, m: Message, selection
     text = (m.body or "").strip()
     bot_cfg = cfg["bot"]
 
-    # 1) seleção no menu / botões do bot
+    # 1) selection from the bot menu / buttons
     if selection_id:
         if selection_id.startswith("menu:"):
             intent = selection_id.split(":", 1)[1]
@@ -113,7 +113,7 @@ async def handle_inbound(session: AsyncSession, t: Ticket, m: Message, selection
         if selection_id == "bot:human":
             return await handoff(session, t, ctx.get("intent", "desconhecido"), "cliente_pediu_humano")
 
-    # 2) primeira interação: saudação + menu
+    # 2) first interaction: greeting + menu
     if turns == 0 and not text.strip():
         return await send_menu(session, t, cfg)
     if turns == 0:
@@ -124,7 +124,7 @@ async def handle_inbound(session: AsyncSession, t: Ticket, m: Message, selection
             return await handoff(session, t, intent, "intencao_clara", conf, text)
         return await send_menu(session, t, cfg)
 
-    # 3) conversa em andamento
+    # 3) ongoing conversation
     norm = _norm(text)
     if any(k in norm for k in bot_cfg["handoff_keywords"]):
         return await handoff(session, t, ctx.get("intent", "desconhecido"), "palavra_chave")

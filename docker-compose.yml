@@ -1,4 +1,4 @@
-# Stack de produção/homologação: PostgreSQL + Redis (Streams) + API + Worker (+ MinIO e Caddy opcionais).
+# Production/staging stack: PostgreSQL + Redis (Streams) + API + Worker (+ optional MinIO and Caddy).
 #   docker compose up -d --build
 #   docker compose --profile s3 --profile proxy up -d --build
 name: flowmentor
@@ -8,9 +8,9 @@ x-app: &app
   env_file: .env
   environment: &app-env
     ENVIRONMENT: production
-    DATABASE_URL: postgresql+asyncpg://flowmentor:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}@db:5432/flowmentor
+    DATABASE_URL: postgresql+asyncpg://flowmentor:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/flowmentor
     REDIS_URL: redis://redis:6379/0
-    RUN_WORKERS_IN_PROCESS: "false"   # o consumo de eventos/jobs roda no serviço `worker`
+    RUN_WORKERS_IN_PROCESS: "false"   # event/job consumption runs in the `worker` service
     SEED_DEMO_DATA: "false"
   depends_on:
     db: { condition: service_healthy }
@@ -47,18 +47,18 @@ services:
     command: ["python", "-m", "app.worker"]
     healthcheck: { disable: true }
 
-  # --- Opcional: armazenamento S3-compatível local (em produção use S3/GCS) ---
+  # --- Optional: local S3-compatible storage (in production use S3/GCS) ---
   minio:
     profiles: [s3]
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_USER:-flowmentor}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?defina MINIO_PASSWORD}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?set MINIO_PASSWORD}
     volumes: [miniodata:/data]
     ports: ["9000:9000", "9001:9001"]
 
-  # --- Opcional: TLS automático (Let's Encrypt) e HTTP/2 ---
+  # --- Optional: automatic TLS (Let's Encrypt) and HTTP/2 ---
   caddy:
     profiles: [proxy]
     image: caddy:2-alpine

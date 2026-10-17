@@ -10,7 +10,7 @@ export default async function pipeline(ctx) {
   let view = "board";
   let owner = "";
   let users = [];
-  try { users = (await api.get("/api/v1/users")).items; } catch { /* sem permissão */ }
+  try { users = (await api.get("/api/v1/users")).items; } catch { /* no permission */ }
   const holder = h("div");
   const ownerSel = h("select", { class: "select", style: { width: "190px" }, onChange: (e) => { owner = e.target.value; load(); } },
     h("option", { value: "" }, "Todos os responsáveis"), users.filter((u) => ["agent", "supervisor", "consultor", "admin"].includes(u.role)).map((u) => h("option", { value: u.id }, u.name)));

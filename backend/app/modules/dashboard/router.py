@@ -1,4 +1,4 @@
-"""Dashboard executivo: comercial, operação, contratos/faturamento e atendimento (visão consolidada)."""
+"""Executive dashboard: sales, operations, contracts/billing and customer service (consolidated view)."""
 from __future__ import annotations
 
 from datetime import date, timedelta

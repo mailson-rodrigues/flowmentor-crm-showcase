@@ -1,4 +1,4 @@
-"""Reações a eventos: deal.won → contrato + casos operacionais; monitor de SLA de casos/laudos."""
+"""Event reactions: deal.won → contract + operational cases; SLA monitor for cases/reports."""
 from __future__ import annotations
 
 import uuid
@@ -64,7 +64,7 @@ async def on_deal_won(event: Event) -> None:
 
 @periodic("ops.sla_monitor", 120)
 async def sla_monitor() -> None:
-    """Marca casos/laudos com SLA estourado e emite ``sla.breached``."""
+    """Flags cases/reports whose SLA was breached and emits ``sla.breached``."""
     now = utcnow()
     async with session_scope() as s:
         cases = (await s.execute(sa.select(Case).where(Case.sla_due_at < now, Case.sla_breached_at.is_(None), Case.status.notin_([CaseStatus.done, CaseStatus.cancelled])))).scalars().all()

@@ -1,4 +1,4 @@
-"""Webhooks outbound / Open API: registro de endpoints HTTP que recebem eventos do CRM (deal.won, case.created, sla.breached...)."""
+"""Outbound webhooks / Open API: registration of HTTP endpoints that receive CRM events (deal.won, case.created, sla.breached...)."""
 from __future__ import annotations
 
 import fnmatch
@@ -51,7 +51,7 @@ def sign(secret: str, ts: int, body: str) -> str:
 
 
 def validate_url(url: str) -> None:
-    """Proteção SSRF: somente https (http só em dev) e nunca endereços internos."""
+    """SSRF protection: https only (http only in dev) and never internal addresses."""
     u = urlparse(url)
     if u.scheme not in ("https", "http") or not u.hostname:
         raise bad_request("URL inválida", code="invalid_url")
@@ -132,7 +132,7 @@ def register(bus: EventBus) -> None:
     bus.subscribe("*", dispatch_event, "webhooks.dispatch")
 
 
-# ------------------------------------------------------------------ API de gestão
+# ------------------------------------------------------------------ Management API
 class EndpointIn(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     url: str = Field(max_length=500)

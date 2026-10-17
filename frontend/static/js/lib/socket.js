@@ -1,4 +1,4 @@
-// Cliente Socket.IO: mensagens, status, digitação, alertas de SLA e presença em tempo real.
+// Socket.IO client: messages, status, typing, SLA alerts and presence in real time.
 import { auth } from "./api.js";
 
 let sock = null;

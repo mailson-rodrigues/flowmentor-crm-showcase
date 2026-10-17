@@ -1,4 +1,4 @@
-"""JWT de acesso (curta duração) + refresh tokens opacos com rotação e revogação."""
+"""Access JWT (short-lived) + opaque refresh tokens with rotation and revocation."""
 from __future__ import annotations
 
 import hashlib
@@ -42,7 +42,7 @@ def decode_access_token(token: str) -> dict[str, Any]:
 
 
 def new_refresh_token() -> tuple[str, str, datetime]:
-    """Retorna (token_em_claro, hash_sha256, expira_em)."""
+    """Returns (plaintext_token, sha256_hash, expires_at)."""
     raw = secrets.token_urlsafe(48)
     return raw, hash_token(raw), utcnow() + timedelta(days=settings.refresh_token_ttl_days)
 

@@ -1,4 +1,4 @@
-"""Webhooks outbound (Open API) e fila de jobs agendados persistente."""
+"""Outbound webhooks (Open API) and a persistent scheduled-jobs queue."""
 from __future__ import annotations
 
 import uuid
@@ -44,7 +44,7 @@ class WebhookDelivery(UUIDPk, Base):
 
 
 class ScheduledJob(UUIDPk, Base):
-    """Jobs duráveis (ex.: disparo de pesquisa após janela de carência, renovação de token)."""
+    """Durable jobs (e.g. survey dispatch after the grace window, token renewal)."""
 
     __tablename__ = "scheduled_jobs"
     __table_args__ = (sa.Index("idx_jobs_due", "status", "run_at"),)

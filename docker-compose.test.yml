@@ -1,5 +1,5 @@
-# Override para validação local/homologação (NÃO usar em produção): expõe PostgreSQL/Redis em 127.0.0.1
-# e liga os dados de demonstração e o Meta em sandbox.
+# Override for local/staging validation (DO NOT use in production): exposes PostgreSQL/Redis on 127.0.0.1
+# and enables the demo data and Meta in sandbox mode.
 #   docker compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
 services:
   db:

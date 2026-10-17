@@ -1,8 +1,8 @@
-"""KPIs automatizados: FRT, TMA/AHT, FCR, throughput, CSAT/NPS/CES, ocupação do agente e SLA.
+"""Automated KPIs: FRT, AHT, FCR, throughput, CSAT/NPS/CES, agent occupancy and SLA.
 
-Implementação sobre o banco transacional usando os *snapshots* gravados em ``tickets`` (sem varrer mensagens).
-Em volumes maiores, ``KpiStore`` pode ser trocado por uma implementação ClickHouse/Elasticsearch alimentada pelo
-barramento de eventos — a API HTTP permanece idêntica.
+Implemented on the transactional database using the *snapshots* stored in ``tickets`` (without scanning messages).
+At larger volumes, ``KpiStore`` can be replaced by a ClickHouse/Elasticsearch implementation fed by the
+event bus — the HTTP API stays identical.
 """
 from __future__ import annotations
 
@@ -80,7 +80,7 @@ async def compute_overview(session: AsyncSession, org_id: uuid.UUID, start: date
     sla_ok = sum(1 for t in met if t.first_response_time_seconds <= (t.sla_first_response_due_at - t.created_at).total_seconds())
     breaches = sum(1 for t in tickets if (t.sla_flags or {}).get("frt_breached") or (t.sla_flags or {}).get("solution_breached"))
 
-    # Throughput por bucket
+    # Throughput per bucket
     series: dict[str, dict[str, int]] = defaultdict(lambda: {"created": 0, "closed": 0, "transferred": 0, "messages_in": 0, "messages_out": 0})
     for t in tickets:
         series[_bucket(t.created_at, hourly)]["created"] += 1
@@ -127,7 +127,7 @@ async def compute_overview(session: AsyncSession, org_id: uuid.UUID, start: date
         "rating_distribution": {str(k): sum(1 for r in csat if r == k) for k in range(1, 6)},
     }
 
-    # Ocupação e tabela por agente
+    # Occupancy and per-agent table
     users = {u.id: u for u in (await session.execute(sa.select(User).where(User.organization_id == org_id, User.role.in_(["agent", "consultor", "supervisor"])))).scalars().all()}
     plogs = (await session.execute(sa.select(AgentPresenceLog).where(AgentPresenceLog.organization_id == org_id, AgentPresenceLog.started_at <= end,
                                                                         sa.or_(AgentPresenceLog.ended_at.is_(None), AgentPresenceLog.ended_at >= start)))).scalars().all()
@@ -194,7 +194,7 @@ async def compute_overview(session: AsyncSession, org_id: uuid.UUID, start: date
 async def overview(date_from: date | None = None, date_to: date | None = None, department_id: uuid.UUID | None = None, agent_id: uuid.UUID | None = None,
                    p: Principal = Depends(require("kpi:view")), session: AsyncSession = Depends(get_session)):
     start, end = _range(date_from, date_to)
-    if not p.can("inbox:all") and p.user_id:  # ABAC: consultor/atendente enxerga apenas seus próprios indicadores
+    if not p.can("inbox:all") and p.user_id:  # ABAC: consultants/agents only see their own indicators
         agent_id = p.user_id
     return await compute_overview(session, p.org_id, start, end, department_id, agent_id)
 
@@ -202,7 +202,7 @@ async def overview(date_from: date | None = None, date_to: date | None = None, d
 @router.get("/surveys")
 async def survey_responses(date_from: date | None = None, date_to: date | None = None, sentiment: str | None = None, max_rating: int | None = None, limit: int = Query(100, le=500),
                            p: Principal = Depends(require("kpi:view")), session: AsyncSession = Depends(get_session)):
-    """Lista avaliações e comentários (detratores primeiro) para ação de recuperação."""
+    """Lists ratings and comments (detractors first) for recovery action."""
     from app.models import Contact
 
     start, end = _range(date_from, date_to)

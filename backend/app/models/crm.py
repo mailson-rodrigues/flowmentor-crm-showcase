@@ -1,4 +1,4 @@
-"""Módulo Pipeline (CRM Comercial): catálogo, oportunidades, itens, histórico, atividades, propostas."""
+"""Pipeline module (sales CRM): catalog, deals, items, history, activities, proposals."""
 from __future__ import annotations
 
 import enum
@@ -29,7 +29,7 @@ class ProductService(UUIDPk, Base):
     description: Mapped[str | None] = mapped_column(sa.Text)
     module_category: Mapped[str] = mapped_column(sa.String(80), nullable=False)
     billing_modality: Mapped[BillingModality] = mapped_column(enum_col(BillingModality, "billing_modality"))
-    unit_label: Mapped[str | None] = mapped_column(sa.String(30))  # hora, exame, mês, ano
+    unit_label: Mapped[str | None] = mapped_column(sa.String(30))  # hour, exam, month, year
     base_unit_price: Mapped[Decimal] = mapped_column(sa.Numeric(12, 2), nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
@@ -64,9 +64,9 @@ class Deal(UUIDPk, Timestamps, Base):
     title: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     stage: Mapped[DealStage] = mapped_column(enum_col(DealStage, "deal_stage"), default=DealStage.lead_inbound)
     source: Mapped[str | None] = mapped_column(sa.String(40))  # whatsapp|indicacao|evento|site|outbound
-    position: Mapped[float] = mapped_column(sa.Float, default=0)  # ordenação no kanban
+    position: Mapped[float] = mapped_column(sa.Float, default=0)  # kanban ordering
     probability: Mapped[int] = mapped_column(default=5)
-    expected_value: Mapped[Decimal] = mapped_column(sa.Numeric(12, 2), default=0)  # soma dos itens, sem desconto
+    expected_value: Mapped[Decimal] = mapped_column(sa.Numeric(12, 2), default=0)  # sum of the items, without discount
     discount_percentage: Mapped[Decimal] = mapped_column(sa.Numeric(5, 2), default=0)
     discount_approved_by: Mapped[uuid.UUID | None] = mapped_column(sa.Uuid)
     final_contracted_value: Mapped[Decimal | None] = mapped_column(sa.Numeric(12, 2))
@@ -113,7 +113,7 @@ class CrmDealTicket(UUIDPk, Base):
 
 
 class Activity(UUIDPk, Base):
-    """Timeline unificada da conta/contato/oportunidade (WhatsApp, notas, reuniões, mudanças de estágio)."""
+    """Unified timeline of the account/contact/deal (WhatsApp, notes, meetings, stage changes)."""
 
     __tablename__ = "activities"
     __table_args__ = (

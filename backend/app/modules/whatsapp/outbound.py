@@ -1,4 +1,4 @@
-"""Envio assíncrono de mensagens à Meta (consumidor de ``message.outbound_queued``) e atualização de status."""
+"""Asynchronous message sending to Meta (consumer of ``message.outbound_queued``) and status updates."""
 from __future__ import annotations
 
 import asyncio
@@ -71,7 +71,7 @@ async def send_outbound(event: Event) -> None:
             m.status, m.error = MessageStatus.failed, last_err
         emit(s, "message.status", m.organization_id, {"message_id": str(m.id), "ticket_id": str(m.ticket_id), "status": m.status.value, "error": m.error})
         if m.status == MessageStatus.sent and settings.meta_mode == "sandbox":
-            m.status, m.delivered_at = MessageStatus.delivered, utcnow()  # sandbox: entrega instantânea
+            m.status, m.delivered_at = MessageStatus.delivered, utcnow()  # sandbox: instant delivery
             emit(s, "message.status", m.organization_id, {"message_id": str(m.id), "ticket_id": str(m.ticket_id), "status": "delivered"})
 
 
@@ -80,7 +80,7 @@ async def apply_status(session: AsyncSession, wamid: str, status: str, error: di
     if m is None:
         return
     if STATUS_RANK.get(status, 0) <= STATUS_RANK.get(m.status.value, 0) and status != "failed":
-        return  # nunca regride (webhooks podem chegar fora de ordem)
+        return  # never goes backwards (webhooks may arrive out of order)
     m.status = MessageStatus(status)
     now = utcnow()
     if status == "delivered":

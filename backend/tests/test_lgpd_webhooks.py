@@ -19,14 +19,14 @@ async def test_dsr_access_anonymization_and_audit_chain(client, env, admin, cons
     t = await _conversation(client, env, admin, consultor)
     cid = t["contact"]["id"]
 
-    # acesso (art. 18, II) devolve exportação completa
+    # access (art. 18, II) returns a complete export
     req = (await client.post("/api/v1/lgpd/requests", headers=auditor, json={"contact_id": cid, "request_type": "access"})).json()
     assert req["status"] == "open" and req["due_at"]
     done = (await client.post(f"/api/v1/lgpd/requests/{req['id']}/process", headers=auditor)).json()
     assert done["status"] == "completed" and done["result"]["summary"]["messages"] >= 1
     assert "123.456.789-09" in str(done["result"]["export"])
 
-    # anonimização: apaga PII, mantém estatísticas
+    # anonymization: erases PII, keeps statistics
     req2 = (await client.post("/api/v1/lgpd/requests", headers=auditor, json={"contact_id": cid, "request_type": "anonymization"})).json()
     res = (await client.post(f"/api/v1/lgpd/requests/{req2['id']}/process", headers=auditor)).json()
     assert res["status"] == "completed" and res["result"]["messages"] >= 1
@@ -35,14 +35,14 @@ async def test_dsr_access_anonymization_and_audit_chain(client, env, admin, cons
         assert c.anonymized_at and c.wa_id.startswith("anon-") and c.name == "Titular anonimizado"
         bodies = (await s.execute(sa.select(Message.body))).scalars().all()
         assert all("123.456.789-09" not in (b or "") for b in bodies)
-    # não é possível enviar mensagens a titular anonimizado
+    # messages cannot be sent to an anonymized data subject
     t_after = await client.post(f"/api/v1/tickets/{t['id']}/messages", headers=consultor, json={"body": "oi"})
     assert t_after.status_code == 409
 
-    # trilha de auditoria imutável com cadeia de hashes
+    # immutable audit trail with a hash chain
     ok = (await client.get("/api/v1/lgpd/audit-logs/verify", headers=auditor)).json()
     assert ok["valid"] is True and ok["checked"] >= 3
-    async with session_scope() as s:  # adulteração manual é detectada
+    async with session_scope() as s:  # manual tampering is detected
         row = (await s.execute(sa.select(AuditLog).order_by(AuditLog.seq).limit(1))).scalar_one()
         row.action = "ADULTERADO"
     bad = (await client.get("/api/v1/lgpd/audit-logs/verify", headers=auditor)).json()
@@ -86,13 +86,13 @@ async def test_outbound_webhooks_signature_retry_and_ssrf(client, env, admin, mo
     await env.drain()
     types = [c[0] for c in calls]
     assert "deal.created" in types and "deal.won" in types and "deal.stage_changed" in types
-    assert "case.created" not in types  # fora das assinaturas do endpoint
+    assert "case.created" not in types  # outside the endpoint's subscriptions
     won = next(c for c in calls if c[0] == "deal.won")
     assert won[2]["data"]["deal_id"] == deal["id"] and won[2]["type"] == "deal.won"
 
-    # assinatura HMAC verificável pelo receptor
+    # HMAC signature verifiable by the receiver
     assert wh.sign("segredo", 123, "{}") == wh.sign("segredo", 123, "{}") != wh.sign("outro", 123, "{}")
-    # SSRF: em produção bloqueia hosts privados/loopback
+    # SSRF: in production blocks private/loopback hosts
     from app.config import settings
     monkeypatch.setattr(settings, "environment", "production")
     import pytest
@@ -114,7 +114,7 @@ async def test_open_api_key_lead_capture(client, admin):
     assert ok.status_code == 201
     deal = (await client.get(f"/api/v1/deals/{ok.json()['deal_id']}", headers=admin)).json()
     assert deal["stage"] == "lead_inbound" and deal["source"] == "site" and "<script" not in deal["notes"]
-    # chave sem o escopo não acessa outras rotas
+    # a key without the scope cannot access other routes
     assert (await client.get("/api/v1/users", headers=h)).status_code == 403
     bad = await client.post("/api/v1/public/leads", headers={"X-API-Key": "fm_invalida"}, json={"name": "A B", "phone": "62999990002", "consent": True})
     assert bad.status_code == 401

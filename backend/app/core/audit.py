@@ -1,8 +1,8 @@
-"""Trilha de auditoria imutável (append-only) com cadeia de hashes (tamper-evident).
+"""Immutable (append-only) audit trail with a hash chain (tamper-evident).
 
-Cada registro guarda ``prev_hash`` e ``hash = SHA256(prev_hash | campos)``. Qualquer edição/remoção
-posterior quebra a cadeia e é detectada por ``verify_chain``. No PostgreSQL, triggers adicionais
-(migração 0002) bloqueiam UPDATE/DELETE na tabela.
+Each record stores ``prev_hash`` and ``hash = SHA256(prev_hash | fields)``. Any later edit/removal
+breaks the chain and is detected by ``verify_chain``. On PostgreSQL, additional triggers
+(migration 0002) block UPDATE/DELETE on the table.
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ _SENSITIVE_KEYS = {"password", "password_hash", "access_token", "secret", "tax_i
 
 
 def _clean(state: dict | None) -> dict | None:
-    """Remove segredos e mascara PII antes de gravar o estado no log."""
+    """Removes secrets and masks PII before writing the state to the log."""
     if state is None:
         return None
     out: dict[str, Any] = {}
@@ -69,7 +69,7 @@ async def log_action(
     if request is not None:
         ip = ip or client_ip(request)
         user_agent = user_agent or request.headers.get("user-agent")
-    if session.bind.dialect.name == "postgresql":  # serializa a cadeia por organização
+    if session.bind.dialect.name == "postgresql":  # serializes the chain per organization
         await session.execute(sa.text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": f"audit:{org_id}"})
     last = (
         await session.execute(

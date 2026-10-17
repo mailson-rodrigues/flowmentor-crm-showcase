@@ -1,8 +1,8 @@
-"""Pesquisa de satisfação automatizada dentro do WhatsApp (CSAT / NPS / CES).
+"""Automated satisfaction survey inside WhatsApp (CSAT / NPS / CES).
 
-Fluxo: ``ticket.closed`` → job agendado (janela de carência) → mensagem interativa (lista/botões)
-→ resposta (nota) → comentário opcional (+ sentimento via NLP) → ``survey.answered``.
-Regras anti-spam: não envia se o contato respondeu pesquisa nos últimos N dias; ignora respostas após ``expires_at``.
+Flow: ``ticket.closed`` → scheduled job (grace window) → interactive message (list/buttons)
+→ answer (score) → optional comment (+ sentiment via NLP) → ``survey.answered``.
+Anti-spam rules: does not send if the contact answered a survey in the last N days; ignores answers after ``expires_at``.
 """
 from __future__ import annotations
 
@@ -51,12 +51,12 @@ async def is_suppressed(session: AsyncSession, org_id: uuid.UUID, contact_id: uu
 
 
 async def on_ticket_closed(event: Event) -> None:
-    """Agenda a pesquisa após a janela de carência (se elegível)."""
+    """Schedules the survey after the grace window (if eligible)."""
     org_id, tid = uuid.UUID(event.org_id), uuid.UUID(event.payload["ticket_id"])
     async with session_scope() as s:
         cfg = (await svc.org_cfg(s, org_id))["survey"]
         t = await s.get(Ticket, tid)
-        if not cfg["enabled"] or t is None or t.assigned_agent_id is None:  # só atendimentos com humano
+        if not cfg["enabled"] or t is None or t.assigned_agent_id is None:  # only conversations handled by a human
             return
         await s.refresh(t, ["contact"])
         if t.contact.opted_out_at or t.contact.anonymized_at:
@@ -73,7 +73,7 @@ async def send_survey_job(payload: dict) -> None:
     async with session_scope() as s:
         t = await s.get(Ticket, tid)
         if t is None or t.status != TicketStatus.closed:
-            return  # reaberto durante a carência
+            return  # reopened during the grace window
         await s.refresh(t, ["contact"])
         cfg = (await svc.org_cfg(s, t.organization_id))["survey"]
         if t.last_inbound_at and t.closed_at and t.last_inbound_at > t.closed_at:
@@ -96,7 +96,7 @@ async def send_survey_job(payload: dict) -> None:
             payload_ = {"kind": "list", "body": body, "button": "Avaliar", "rows": _rows(CSAT_ROWS, f"svy:{survey.id}"), "section_title": "Sua avaliação"}
         try:
             await svc.queue_outbound(s, t, body=body, type_=MessageType.interactive, is_bot=True, payload=payload_)
-        except Exception:  # janela de 24h fechada, opt-out etc.
+        except Exception:  # 24h window closed, opt-out, etc.
             survey.state, survey.expires_at = "expired", utcnow()
             return
         t.survey_state = "awaiting_rating"
@@ -121,7 +121,7 @@ async def _say(session: AsyncSession, survey: SatisfactionSurvey, body: str, pay
 
 
 def _parse_rating(survey: SatisfactionSurvey, selection_id: str | None, text: str | None) -> tuple[str, int | tuple[int, int]] | None:
-    """Retorna ('rating', n) | ('range', (lo, hi)) | ('skip', 0) ou None se a mensagem não é resposta."""
+    """Returns ('rating', n) | ('range', (lo, hi)) | ('skip', 0) or None if the message is not an answer."""
     if selection_id and selection_id.startswith(f"svy:{survey.id}:"):
         rest = selection_id.split(":", 3)[2:]
         if rest[0] == "r":
@@ -141,13 +141,13 @@ def _parse_rating(survey: SatisfactionSurvey, selection_id: str | None, text: st
 
 
 async def try_handle_reply(session: AsyncSession, org_id: uuid.UUID, contact: Contact, *, selection_id: str | None, text: str | None) -> bool:
-    """Retorna True se a mensagem foi consumida como resposta da pesquisa (não abre novo ticket)."""
+    """Returns True if the message was consumed as a survey answer (does not open a new ticket)."""
     survey = await _pending_survey(session, org_id, contact.id)
     if survey is None:
         return False
     now = utcnow()
     if survey.expires_at < now:
-        survey.state = "expired"  # resposta tardia é ignorada → segue como mensagem normal
+        survey.state = "expired"  # late answer is ignored → continues as a normal message
         return False
     t = await session.get(Ticket, survey.ticket_id)
 
@@ -166,10 +166,10 @@ async def try_handle_reply(session: AsyncSession, org_id: uuid.UUID, contact: Co
 
     parsed = _parse_rating(survey, selection_id, text)
     if parsed is None:
-        return False  # texto livre fora do fluxo → trata como nova mensagem
+        return False  # free text outside the flow → treat as a new message
     kind, val = parsed
     cfg = (await svc.org_cfg(session, org_id))["survey"]
-    if kind == "range":  # NPS passo 2: valor exato dentro da faixa
+    if kind == "range":  # NPS step 2: exact value within the range
         lo, hi = val
         rows = [{"id": f"svy:{survey.id}:{n}", "title": str(n), "description": {0: "Nada provável", 10: "Com certeza recomendaria"}.get(n)} for n in range(lo, hi + 1)]
         survey.state = "awaiting_nps_value"

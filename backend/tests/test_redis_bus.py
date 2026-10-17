@@ -1,4 +1,4 @@
-"""RedisStreamsBus contra um Redis real. Só roda com TEST_REDIS_URL (ex.: redis://localhost:6379/15)."""
+"""RedisStreamsBus against a real Redis. Only runs with TEST_REDIS_URL (e.g. redis://localhost:6379/15)."""
 import asyncio
 import os
 import uuid

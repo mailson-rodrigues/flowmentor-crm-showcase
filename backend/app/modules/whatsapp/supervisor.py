@@ -1,4 +1,4 @@
-"""Painel de supervisão ao vivo, whispering, barge-in e monitor de SLA de tickets."""
+"""Live supervision dashboard, whispering, barge-in and ticket SLA monitor."""
 from __future__ import annotations
 
 import uuid
@@ -80,7 +80,7 @@ class WhisperIn(BaseModel):
 
 @router.post("/tickets/{ticket_id}/whisper", status_code=201)
 async def whisper(ticket_id: uuid.UUID, body: WhisperIn, request: Request, p: Principal = Depends(require("supervisor:live")), session: AsyncSession = Depends(get_session)):
-    """Sussurro: orientação visível somente ao atendente responsável (o cliente nunca vê)."""
+    """Whisper: guidance visible only to the responsible agent (the customer never sees it)."""
     t = await session.get(Ticket, ticket_id)
     if not t or t.organization_id != p.org_id:
         raise not_found("Atendimento")
@@ -98,7 +98,7 @@ async def whisper(ticket_id: uuid.UUID, body: WhisperIn, request: Request, p: Pr
 
 @router.post("/tickets/{ticket_id}/barge-in")
 async def barge_in(ticket_id: uuid.UUID, request: Request, p: Principal = Depends(require("supervisor:live")), session: AsyncSession = Depends(get_session)):
-    """Barge-in: o supervisor assume a conversa imediatamente; o agente anterior é notificado."""
+    """Barge-in: the supervisor takes over the conversation immediately; the previous agent is notified."""
     t = await session.get(Ticket, ticket_id)
     if not t or t.organization_id != p.org_id or t.status in (TicketStatus.closed,):
         raise not_found("Atendimento")
@@ -118,7 +118,7 @@ async def barge_in(ticket_id: uuid.UUID, request: Request, p: Principal = Depend
 
 @periodic("tickets.sla_monitor", 30)
 async def sla_monitor() -> None:
-    """Emite ``sla.at_risk`` (>= 80% do prazo) e ``sla.breached`` uma única vez por ticket/tipo."""
+    """Emits ``sla.at_risk`` (>= 80% of the deadline) and ``sla.breached`` once per ticket/type."""
     now = utcnow()
     async with session_scope() as s:
         tickets = (await s.execute(sa.select(Ticket).where(Ticket.status.in_(OPEN_STATUSES)))).scalars().all()

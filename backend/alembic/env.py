@@ -1,4 +1,4 @@
-"""Ambiente do Alembic (async). Uso:  alembic upgrade head"""
+"""Alembic environment (async). Usage:  alembic upgrade head"""
 import asyncio
 import re
 from logging.config import fileConfig
@@ -20,7 +20,7 @@ _MESSAGE_PARTITION = re.compile(r"^messages_(default|\d{4}_\d{2})$")
 
 
 def include_object(obj, name, type_, reflected, compare_to) -> bool:
-    """As partições mensais de `messages` são criadas pela migração/job, não pelo metadata: ignora no autogenerate."""
+    """The monthly partitions of `messages` are created by the migration/job, not by the metadata: ignore them in autogenerate."""
     if type_ == "table" and reflected and name and _MESSAGE_PARTITION.match(name):
         return False
     if type_ == "index" and reflected and obj.table is not None and _MESSAGE_PARTITION.match(obj.table.name):
@@ -37,9 +37,9 @@ def run_migrations_offline() -> None:
 def do_run_migrations(connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata, compare_type=True, include_object=include_object)
     pg = connection.dialect.name == "postgresql"
-    if pg:  # réplicas subindo juntas executam `alembic upgrade head`: só uma migra por vez
+    if pg:  # replicas starting together run `alembic upgrade head`: only one migrates at a time
         connection.exec_driver_sql("SELECT pg_advisory_lock(hashtext('flowmentor:alembic'))")
-        connection.commit()  # o lock é de sessão; encerra a transação implícita para o Alembic gerir a sua
+        connection.commit()  # the lock is session-scoped; end the implicit transaction so Alembic can manage its own
     try:
         with context.begin_transaction():
             context.run_migrations()

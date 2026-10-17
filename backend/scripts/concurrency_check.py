@@ -1,10 +1,10 @@
-"""Verificações de concorrência contra a stack em execução (PostgreSQL + Redis + worker). Uso:
+"""Concurrency checks against the running stack (PostgreSQL + Redis + worker). Usage:
 
-    DEMO_USER_PASSWORD=<senha> META_APP_SECRET=<segredo> python scripts/concurrency_check.py [http://localhost:8000]
+    DEMO_USER_PASSWORD=<password> META_APP_SECRET=<secret> python scripts/concurrency_check.py [http://localhost:8000]
 
-A) reentrega simultânea do mesmo wamid não duplica mensagens (idempotência)
-B) roteamento concorrente (FOR UPDATE SKIP LOCKED): nenhum ticket com dois agentes, respeitando max_concurrent_chats
-C) escritas concorrentes em audit_logs mantêm a cadeia de hash íntegra (advisory lock)
+A) simultaneous redelivery of the same wamid does not duplicate messages (idempotency)
+B) concurrent routing (FOR UPDATE SKIP LOCKED): no ticket with two agents, respecting max_concurrent_chats
+C) concurrent writes to audit_logs keep the hash chain intact (advisory lock)
 """
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ async def main() -> None:
         cons = await login(c, "consultor@flowmentor.com.br")
         aud = await login(c, "auditor@flowmentor.com.br")
 
-        # --- A) idempotência sob concorrência
+        # --- A) idempotency under concurrency
         wa = "5562" + str(uuid.uuid4().int)[:9]
         wamid = f"wamid.DUP{uuid.uuid4().hex[:12]}"
         codes = await asyncio.gather(*[post(c, payload(wa, wamid, "mensagem repetida")) for _ in range(20)])

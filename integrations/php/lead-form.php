@@ -1,13 +1,13 @@
 <?php
 /**
- * Flowmentor CRM — captura de leads via formulário web (PHP 8+, sem dependências).
+ * Flowmentor CRM — lead capture from a web form (PHP 8+, no dependencies).
  *
- * Publica o lead em POST /api/v1/public/leads usando uma chave de API com os escopos
- * `contacts:write` e `deals:write` (Configurações > Webhooks & API > Chaves de API).
+ * Publishes the lead to POST /api/v1/public/leads using an API key with the scopes
+ * `contacts:write` and `deals:write` (Settings > Webhooks & API > API keys).
  *
- * Variáveis de ambiente (nunca coloque a chave no HTML/JS):
- *   FLOWMENTOR_URL      ex.: https://crm.suaempresa.com.br
- *   FLOWMENTOR_API_KEY  ex.: fm_xxxxxxxxxxxxxxxx
+ * Environment variables (never put the key in HTML/JS):
+ *   FLOWMENTOR_URL      e.g. https://crm.yourcompany.com
+ *   FLOWMENTOR_API_KEY  e.g. fm_xxxxxxxxxxxxxxxx
  */
 declare(strict_types=1);
 
@@ -29,7 +29,7 @@ function respond(int $status, array $body): never
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     respond(405, ['error' => 'Método não permitido']);
 }
-if (!empty($_POST['website'])) {            // honeypot anti-bot: campo oculto que humanos não preenchem
+if (!empty($_POST['website'])) {            // anti-bot honeypot: hidden field that humans do not fill in
     respond(200, ['ok' => true]);
 }
 
@@ -43,7 +43,7 @@ if ($data['name'] === '' || !preg_match('/^\+?[\d\s().-]{10,20}$/', $data['phone
 if ($data['email'] !== '' && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
     respond(422, ['error' => 'E-mail inválido.']);
 }
-if (($_POST['consent'] ?? '') !== '1') {    // LGPD, art. 7º, I: consentimento explícito do titular
+if (($_POST['consent'] ?? '') !== '1') {    // LGPD, art. 7, I: explicit consent of the data subject
     respond(422, ['error' => 'É necessário aceitar o tratamento dos dados para continuar.']);
 }
 

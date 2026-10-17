@@ -1,4 +1,4 @@
-"""Módulo BSP / WhatsApp: contas WABA, templates, tickets, mensagens, eventos, notas, pesquisas, presença."""
+"""BSP / WhatsApp module: WABA accounts, templates, tickets, messages, events, notes, surveys, presence."""
 from __future__ import annotations
 
 import enum
@@ -13,7 +13,7 @@ from app.security.crypto import EncryptedString
 
 
 class WhatsAppAccount(UUIDPk, Timestamps, Base):
-    """Número/WABA conectado via Embedded Signup. Tokens cifrados com envelope encryption."""
+    """Number/WABA connected via Embedded Signup. Tokens encrypted with envelope encryption."""
 
     __tablename__ = "whatsapp_accounts"
     __table_args__ = (sa.UniqueConstraint("phone_number_id", name="uq_wa_phone_number_id"),)
@@ -94,7 +94,7 @@ class Ticket(UUIDPk, Base):
     status: Mapped[TicketStatus] = mapped_column(enum_col(TicketStatus, "ticket_status"), default=TicketStatus.queued)
     priority: Mapped[str] = mapped_column(sa.String(10), default="normal")  # low|normal|high|urgent
     subject: Mapped[str | None] = mapped_column(sa.String(200))
-    summary: Mapped[str | None] = mapped_column(sa.Text)  # resumo gerado por LLM
+    summary: Mapped[str | None] = mapped_column(sa.Text)  # LLM-generated summary
     tags: Mapped[list] = mapped_column(JSONType, default=list)
     required_skills: Mapped[list] = mapped_column(JSONType, default=list)
     bot_active: Mapped[bool] = mapped_column(default=False)
@@ -106,7 +106,7 @@ class Ticket(UUIDPk, Base):
     reopen_count: Mapped[int] = mapped_column(default=0)
     reopened_from_id: Mapped[uuid.UUID | None] = mapped_column(sa.Uuid)
 
-    # Timestamps operacionais críticos
+    # Critical operational timestamps
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
     queued_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     assigned_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
@@ -120,10 +120,10 @@ class Ticket(UUIDPk, Base):
     sla_solution_due_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     sla_flags: Mapped[dict] = mapped_column(JSONType, default=dict)  # {frt_at_risk, frt_breached, sol_at_risk, sol_breached}
 
-    # Snapshots pré-calculados (segundos)
+    # Precomputed snapshots (seconds)
     first_response_time_seconds: Mapped[int | None] = mapped_column()
     handling_time_seconds: Mapped[int | None] = mapped_column()
-    wait_time_seconds: Mapped[int | None] = mapped_column()  # tempo em fila
+    wait_time_seconds: Mapped[int | None] = mapped_column()  # time in queue
     is_fcr: Mapped[bool] = mapped_column(default=False)
 
     contact: Mapped["Contact"] = relationship(lazy="joined")  # noqa: F821
@@ -156,7 +156,7 @@ class MessageStatus(str, enum.Enum):
 
 
 class Message(UUIDPk, Base):
-    """Particionada por mês (created_at) em PostgreSQL via migração; PK física = (id, created_at)."""
+    """Partitioned by month (created_at) on PostgreSQL via migration; physical PK = (id, created_at)."""
 
     __tablename__ = "messages"
     __table_args__ = (
@@ -164,7 +164,7 @@ class Message(UUIDPk, Base):
         sa.Index("idx_messages_meta_id", "meta_message_id"),
     )
 
-    ticket_id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, nullable=False)  # FK lógica (tabela particionada)
+    ticket_id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, nullable=False)  # logical FK (partitioned table)
     organization_id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, nullable=False, index=True)
     meta_message_id: Mapped[str | None] = mapped_column(sa.String(100))  # wamid
     direction: Mapped[MessageDirection] = mapped_column(enum_col(MessageDirection, "message_direction"))
@@ -183,7 +183,7 @@ class Message(UUIDPk, Base):
 
 
 class MediaAsset(UUIDPk, Base):
-    """Metadados de mídia; o binário vive em S3/GCS/FS (nunca no banco relacional)."""
+    """Media metadata; the binary lives in S3/GCS/FS (never in the relational database)."""
 
     __tablename__ = "media_assets"
 
@@ -200,7 +200,7 @@ class MediaAsset(UUIDPk, Base):
 
 
 class TicketEvent(UUIDPk, Base):
-    """Histórico cronológico (event sourcing simplificado) para SLA e auditoria operacional."""
+    """Chronological history (simplified event sourcing) for SLA and operational audit."""
 
     __tablename__ = "ticket_events"
     __table_args__ = (sa.Index("idx_ticket_events_ticket", "ticket_id", "created_at"),)
@@ -215,7 +215,7 @@ class TicketEvent(UUIDPk, Base):
 
 
 class TicketNote(UUIDPk, Base):
-    """Notas internas (invisíveis ao cliente) e sussurros (whisper) de supervisores."""
+    """Internal notes (invisible to the customer) and supervisor whispers."""
 
     __tablename__ = "ticket_notes"
 
@@ -223,7 +223,7 @@ class TicketNote(UUIDPk, Base):
     organization_id: Mapped[uuid.UUID] = mapped_column(sa.Uuid)
     author_id: Mapped[uuid.UUID | None] = mapped_column(sa.ForeignKey("users.id", ondelete="SET NULL"))
     kind: Mapped[str] = mapped_column(sa.String(10), default="note")  # note|whisper
-    target_user_id: Mapped[uuid.UUID | None] = mapped_column(sa.Uuid)  # whisper: só este usuário enxerga
+    target_user_id: Mapped[uuid.UUID | None] = mapped_column(sa.Uuid)  # whisper: only this user can see it
     body: Mapped[str] = mapped_column(sa.Text)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
@@ -250,7 +250,7 @@ class SatisfactionSurvey(UUIDPk, Base):
 
 
 class AgentPresenceLog(UUIDPk, Base):
-    """Linha do tempo de status do agente → ocupação (logado × conversando × pausa)."""
+    """Agent status timeline → occupancy (logged in × chatting × break)."""
 
     __tablename__ = "agent_presence_log"
     __table_args__ = (sa.Index("idx_presence_user_time", "user_id", "started_at"),)

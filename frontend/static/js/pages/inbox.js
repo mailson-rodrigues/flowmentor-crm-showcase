@@ -46,7 +46,7 @@ export default async function inbox(ctx) {
       h("div", { class: "meta" }, h("span", ago(t.last_message_at || t.created_at)), t.unread_count ? h("span", { class: "unread" }, t.unread_count) : null))));
   }
 
-  // ------- seleção
+  // ------- selection
   async function select(id) {
     selectedId = id;
     history.replaceState(null, "", `#/inbox/${id}`);
@@ -237,7 +237,7 @@ export default async function inbox(ctx) {
     return h("div", { class: `bubble ${whisper ? "whisper" : "note"}` }, h("span", { class: "who", style: { color: whisper ? "#BE185D" : "var(--warn-text)" } }, whisper ? `💬 Sussurro de ${n.author_name} (só você vê)` : `📝 Nota interna — ${n.author_name}`), h("div", n.body), h("div", { class: "time" }, timeOnly(n.created_at)));
   }
 
-  // ------- painel de informações
+  // ------- info panel
   async function drawInfo() {
     if (!current) return;
     const t = current.ticket, c = t.contact || {};
@@ -259,7 +259,7 @@ export default async function inbox(ctx) {
       const LABEL = { created: "Atendimento criado", status_change: "Status", agent_assigned: "Atribuído", transferred: "Transferido", handoff: "Handoff bot → humano", first_response: "1ª resposta", sla_breached: "SLA estourado", reopened: "Reaberto", barge_in: "Barge-in", whisper: "Sussurro", survey_sent: "Pesquisa enviada", agent_unassigned: "Desatribuído" };
       const box = infoEl.querySelector("#evBox");
       if (box && current?.ticket.id === t.id) mount(box, h("h4", "Histórico"), h("div", { class: "timeline" }, ev.items.slice(-12).map((e) => h("div", { class: `tl-item ${e.event_type === "sla_breached" ? "warn" : ""}` }, h("div", { style: { fontSize: "12.5px" } }, LABEL[e.event_type] || e.event_type, e.new_value && e.event_type === "status_change" ? `: ${STATUS_LABEL[e.new_value] || e.new_value}` : "", e.meta?.agent_name ? ` → ${e.meta.agent_name}` : ""), h("div", { class: "when" }, dateTime(e.created_at))))));
-    } catch { /* sem histórico */ }
+    } catch { /* no history */ }
   }
 
   // ------- tempo real

@@ -1,4 +1,4 @@
-"""Módulo Core / Cadastros: usuários, departamentos, contatos, contas institucionais, atividades, API keys."""
+"""Core / Registries module: users, departments, contacts, institutional accounts, activities, API keys."""
 from __future__ import annotations
 
 import hashlib
@@ -32,7 +32,7 @@ router = APIRouter(prefix="/api/v1", tags=["Core / Cadastros"])
 
 def normalize_wa_id(raw: str) -> str:
     d = re.sub(r"\D", "", raw or "")
-    if len(d) in (10, 11):  # número BR sem DDI
+    if len(d) in (10, 11):  # Brazilian number without country code
         d = "55" + d
     if len(d) < 10 or len(d) > 15:
         raise bad_request("Número de telefone inválido (use DDI+DDD+número)", code="invalid_phone")
@@ -60,7 +60,7 @@ async def get_or_create_contact(session: AsyncSession, org_id: uuid.UUID, wa_id:
     return c, True
 
 
-# ------------------------------------------------------------------ Organização
+# ------------------------------------------------------------------ Organization
 class OrgSettingsIn(BaseModel):
     settings: dict
 
@@ -87,7 +87,7 @@ async def roles(p: Principal = Depends(get_principal)):
     return {"roles": [{"role": r.value, "permissions": sorted(ROLE_PERMISSIONS[r])} for r in Role], "all_permissions": sorted(ALL_PERMISSIONS)}
 
 
-# ------------------------------------------------------------------ Usuários
+# ------------------------------------------------------------------ Users
 class UserIn(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     email: EmailStr
@@ -298,7 +298,7 @@ async def update_contact(contact_id: uuid.UUID, body: ContactPatch, request: Req
 
 @router.post("/contacts/{contact_id}/reveal")
 async def reveal_contact(contact_id: uuid.UUID, request: Request, p: Principal = Depends(require("pii:reveal")), session: AsyncSession = Depends(get_session)):
-    """Revela o telefone/e-mail completos — cada acesso é gravado na trilha de auditoria (VIEW_PHONE)."""
+    """Reveals the full phone/e-mail — every access is recorded in the audit trail (VIEW_PHONE)."""
     c = await _contact_or_404(session, p.org_id, contact_id)
     await audit.log_action(session, org_id=p.org_id, action="VIEW_PHONE", resource_type="contacts", resource_id=c.id, actor_user_id=p.user_id, request=request)
     return {"wa_id": c.wa_id, "email": c.email}
@@ -477,7 +477,7 @@ async def complete_activity(activity_id: uuid.UUID, p: Principal = Depends(get_p
 @router.get("/timeline")
 async def timeline(account_id: uuid.UUID | None = None, contact_id: uuid.UUID | None = None, deal_id: uuid.UUID | None = None,
                    limit: int = 100, p: Principal = Depends(get_principal), session: AsyncSession = Depends(get_session)):
-    """Timeline unificada: WhatsApp (tickets/mensagens), notas, reuniões, mudanças de estágio e casos."""
+    """Unified timeline: WhatsApp (tickets/messages), notes, meetings, stage changes and cases."""
     stmt = sa.select(Activity).where(Activity.organization_id == p.org_id)
     if account_id:
         stmt = stmt.where(Activity.account_id == account_id)

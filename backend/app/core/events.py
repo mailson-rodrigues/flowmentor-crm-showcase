@@ -1,10 +1,10 @@
-"""Barramento de eventos assíncrono (Ports & Adapters).
+"""Asynchronous event bus (Ports & Adapters).
 
-* ``InMemoryBus``     → dev/test e instalações single-node.
-* ``RedisStreamsBus`` → produção: Redis Streams + consumer groups (ordenação, persistência, escala horizontal).
-  A porta ``EventBus`` permite trocar por RabbitMQ/Kafka sem tocar nos módulos de negócio.
+* ``InMemoryBus``     → dev/test and single-node installs.
+* ``RedisStreamsBus`` → production: Redis Streams + consumer groups (ordering, persistence, horizontal scale).
+  The ``EventBus`` port allows swapping in RabbitMQ/Kafka without touching business modules.
 
-Convenção de nomes:  ``<entidade>.<acao>``  (ex.: ``ticket.created``, ``deal.won``, ``sla.breached``).
+Naming convention:  ``<entity>.<action>``  (e.g. ``ticket.created``, ``deal.won``, ``sla.breached``).
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ class Event:
 
 
 class EventBus:
-    """Porta do barramento."""
+    """Bus port."""
 
     def __init__(self) -> None:
         self._subs: list[tuple[str, str, Handler]] = []
@@ -65,7 +65,7 @@ class EventBus:
         pass
 
     async def drain(self, timeout: float = 5.0) -> None:
-        """Aguarda o processamento dos eventos pendentes (útil em testes)."""
+        """Waits for pending events to be processed (useful in tests)."""
 
     async def _dispatch(self, event: Event) -> None:
         for pattern, name, handler in self._subs:
@@ -137,7 +137,7 @@ class RedisStreamsBus(EventBus):
     async def start(self) -> None:
         try:
             await self.redis.xgroup_create(self.stream, self.group, id="$", mkstream=True)
-        except Exception as exc:  # BUSYGROUP: já existe
+        except Exception as exc:  # BUSYGROUP: already exists
             if "BUSYGROUP" not in str(exc):
                 raise
         self._stopping = False
@@ -182,7 +182,7 @@ class RedisStreamsBus(EventBus):
             await self.redis.xack(self.stream, self.group, msg_id)
 
     async def _claim_stale(self) -> None:
-        """Reivindica mensagens de consumidores que morreram sem confirmar (> 60s)."""
+        """Claims messages from consumers that died without acknowledging them (> 60s)."""
         try:
             res = await self.redis.xautoclaim(self.stream, self.group, self.consumer, min_idle_time=60_000, count=20)
             for msg_id, fields in res[1]:
@@ -217,7 +217,7 @@ async def publish(type_: str, org_id: Any, payload: dict[str, Any], actor_id: An
 
 
 def emit(session: AsyncSession, type_: str, org_id: Any, payload: dict[str, Any], actor_id: Any = None) -> None:
-    """Publica o evento SOMENTE após o commit da transação corrente (evita consumidores lerem estado inexistente)."""
+    """Publishes the event ONLY after the current transaction commits (prevents consumers from reading state that does not exist yet)."""
 
     async def _go() -> None:
         await publish(type_, org_id, payload, actor_id)

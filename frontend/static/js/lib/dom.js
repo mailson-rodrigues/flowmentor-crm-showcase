@@ -1,4 +1,4 @@
-// Micro-biblioteca DOM (sem innerHTML → sem XSS por construção) + ícones + formatação pt-BR.
+// Micro DOM library (no innerHTML → XSS-free by construction) + icons + pt-BR formatting.
 
 export function h(tag, props, ...children) {
   const el = document.createElement(tag);
@@ -37,7 +37,7 @@ export function svg(tag, attrs = {}, ...children) {
   return el;
 }
 
-// Ícones no estilo "feather/lucide" (traços de 24x24)
+// Icons in the "feather/lucide" style (24x24 strokes)
 const ICONS = {
   dashboard: "M3 3h7v9H3z M14 3h7v5h-7z M14 12h7v9h-7z M3 16h7v5H3z",
   pipeline: "M3 4h5v16H3z M10 4h5v10h-5z M17 4h4v6h-4z",
@@ -74,7 +74,7 @@ export function icon(name, cls = "") {
   return el;
 }
 
-// ---------- Formatação pt-BR ----------
+// ---------- pt-BR formatting ----------
 const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 export const money = (v) => (v === null || v === undefined ? "—" : BRL.format(Number(v)));
 export const moneyShort = (v) => { v = Number(v || 0); return Math.abs(v) >= 1e6 ? `R$ ${(v / 1e6).toFixed(1)} mi` : Math.abs(v) >= 1e3 ? `R$ ${(v / 1e3).toFixed(1)} mil` : BRL.format(v); };
@@ -104,7 +104,7 @@ export const initials = (n) => (n || "?").replace(/^(Dr\.?|Dra\.?|Prof\.?|Profa\
 const PALETTE = ["#0284C7", "#0D9488", "#7C3AED", "#DB2777", "#EA580C", "#4F46E5", "#0891B2", "#65A30D"];
 export function colorFor(s) { let x = 0; for (const c of String(s || "")) x = (x * 31 + c.charCodeAt(0)) >>> 0; return PALETTE[x % PALETTE.length]; }
 export const avatar = (name, cls = "") => h("div", { class: ("avatar " + cls).trim(), style: { background: colorFor(name) }, title: name || "" }, initials(name));
-/** Formatação estilo WhatsApp (*negrito*, _itálico_, ~tachado~, links https) construída via DOM — sem innerHTML. */
+/** WhatsApp-style formatting (*bold*, _italic_, ~strikethrough~, https links) built via the DOM — no innerHTML. */
 export function rich(text) {
   const out = [];
   const re = /(\*[^*\n]+\*)|(_[^_\n]+_)|(~[^~\n]+~)|(https:\/\/[^\s<>"']+)/g;

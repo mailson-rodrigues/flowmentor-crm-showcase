@@ -1,4 +1,4 @@
-"""Hash de senhas (Argon2id) e política de senha."""
+"""Password hashing (Argon2id) and password policy."""
 from __future__ import annotations
 
 import re

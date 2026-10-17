@@ -19,12 +19,12 @@ async def test_deal_totals_discount_and_permission(client, supervisor, agent1, e
     assert r.status_code == 201, r.text
     deal = r.json()
     assert deal["expected_value"] == 3000 + 6500 and deal["final_contracted_value"] == 9500
-    # preço unitário só pode ser sobrescrito por quem tem deals:discount_high
+    # unit price can only be overridden by whoever has deals:discount_high
     assert all(i["unit_price"] == 300 for i in deal["items"] if i["sku"] == "CONS-HORA")
-    # agente pode aplicar até 10% ...
+    # an agent can apply up to 10% ...
     ok = await client.patch(f"/api/v1/deals/{deal['id']}", headers=agent1, json={"discount_percentage": 10})
     assert ok.status_code == 200 and ok.json()["final_contracted_value"] == 8550
-    # ... acima disso exige aprovação de supervisor
+    # ... above that it requires supervisor approval
     blocked = await client.patch(f"/api/v1/deals/{deal['id']}", headers=agent1, json={"discount_percentage": 15})
     assert blocked.status_code == 403 and blocked.json()["error"]["code"] == "discount_requires_approval"
     approved = await client.patch(f"/api/v1/deals/{deal['id']}", headers=supervisor, json={"discount_percentage": 15})
@@ -51,17 +51,17 @@ async def test_won_deal_creates_contract_and_cases(client, supervisor, env):
     cases = (await client.get("/api/v1/cases", headers=supervisor, params={"account_id": acc["id"]})).json()["items"]
     types = {c["case_type"] for c in cases if c["deal_id"] == deal["id"]}
     assert types == {"consultoria", "apoio_diagnostico", "capacitacao"}
-    # horas: lançar consumo e checar limiares
+    # hours: log consumption and check thresholds
     case = next(c for c in cases if c["case_type"] == "consultoria" and c["deal_id"] == deal["id"])
     assert case["hours_contracted"] == 20
     r = await client.post(f"/api/v1/cases/{case['id']}/time-entries", headers=supervisor, json={"hours": 17, "description": "Validação de painel"})
     assert r.status_code == 201
     got = (await client.get(f"/api/v1/cases/{case['id']}", headers=supervisor)).json()
     assert got["hours_consumed"] == 17 and got["hours_pct"] == 85.0
-    # faturamento por consumo respeita banco de horas contratado (nada a faturar dentro da franquia)
+    # consumption billing respects the contracted hour bank (nothing to bill within the allowance)
     inv = await client.post(f"/api/v1/contracts/{ct['id']}/invoice-from-usage", headers=supervisor)
     assert inv.status_code == 201 and "nada a faturar" in inv.json().get("message", "")
-    # excedente é faturado a R$ 300/h
+    # the excess is billed at R$ 300/h
     await client.post(f"/api/v1/cases/{case['id']}/time-entries", headers=supervisor, json={"hours": 5})
     inv = await client.post(f"/api/v1/contracts/{ct['id']}/invoice-from-usage", headers=supervisor)
     assert inv.status_code == 201 and inv.json()["amount"] == 300 * 2
@@ -90,7 +90,7 @@ async def test_kanban_board_and_abac(client, supervisor, agent1, agent2):
     assert sup_total == 4
     mine = sum(c["count"] for c in (await client.get("/api/v1/deals/board", headers=agent1)).json()["columns"])
     other = sum(c["count"] for c in (await client.get("/api/v1/deals/board", headers=agent2)).json()["columns"])
-    assert mine == 2 and other == 2  # cada atendente só enxerga as próprias oportunidades
+    assert mine == 2 and other == 2  # each agent only sees their own deals
 
 
 async def test_pix_invoice_and_billing_cycle(client, admin, supervisor):
@@ -104,7 +104,7 @@ async def test_pix_invoice_and_billing_cycle(client, admin, supervisor):
     invs = (await client.get("/api/v1/invoices", headers=supervisor)).json()
     inv = invs["items"][0]
     assert inv["pix_payload"] and "br.gov.bcb.pix" in inv["pix_payload"]
-    assert inv["status"] == "overdue" and invs["totals"]["overdue"] == 4200  # vencimento em jan/2026 já passou
+    assert inv["status"] == "overdue" and invs["totals"]["overdue"] == 4200  # due date in Jan/2026 has already passed
     after = (await client.get(f"/api/v1/contracts/{ct['id']}", headers=supervisor)).json()
     assert after["next_billing_date"] == "2026-02-05"
     paid = await client.post(f"/api/v1/invoices/{inv['id']}/pay", headers=supervisor, json={"payment_method": "pix"})

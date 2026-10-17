@@ -20,7 +20,7 @@ export default async function settings(ctx) {
   return root;
 }
 
-// ---------------------------------------------------------------- Organização
+// ---------------------------------------------------------------- Organization
 async function orgTab(body) {
   const { settings: s } = await api.get("/api/v1/org");
   const hours = JSON.parse(JSON.stringify(s.business_hours));
@@ -57,7 +57,7 @@ async function orgTab(body) {
   h("div", { class: "mt-16 row", style: { justifyContent: "flex-end" } }, h("button", { class: "btn primary", onClick: save }, icon("check"), "Salvar configurações"))]);
 }
 
-// ---------------------------------------------------------------- Usuários
+// ---------------------------------------------------------------- Users
 async function usersTab(body, reload) {
   const [{ items }, depts, roles] = await Promise.all([api.get("/api/v1/users"), api.get("/api/v1/departments"), api.get("/api/v1/roles")]);
   const dname = Object.fromEntries(depts.items.map((d) => [d.id, d.name]));

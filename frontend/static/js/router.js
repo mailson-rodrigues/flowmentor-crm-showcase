@@ -1,4 +1,4 @@
-// Roteador por hash com carregamento sob demanda, controle de permissão e limpeza de listeners.
+// Hash router with on-demand loading, permission control and listener cleanup.
 import { h, mount } from "./lib/dom.js";
 import { can, canAny } from "./lib/store.js";
 import { spinner, emptyState } from "./lib/ui.js";

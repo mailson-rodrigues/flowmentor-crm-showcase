@@ -1,4 +1,4 @@
-"""Open API pública (autenticada por X-API-Key): captura de leads de formulários web/landing pages (ex.: WordPress/PHP)."""
+"""Public Open API (authenticated by X-API-Key): lead capture from web forms/landing pages (e.g. WordPress/PHP)."""
 from __future__ import annotations
 
 import sqlalchemy as sa

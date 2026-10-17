@@ -1,4 +1,4 @@
-"""Gateways de pagamento (porta) e gerador de BR Code PIX estático ("copia e cola") com CRC16."""
+"""Payment gateways (port) and a static PIX BR Code generator ("copy and paste") with CRC16."""
 from __future__ import annotations
 
 import re
@@ -25,7 +25,7 @@ def crc16(payload: str) -> str:
 
 
 def brcode(pix_key: str, merchant_name: str, merchant_city: str, amount: Decimal | None = None, txid: str = "***") -> str:
-    """Gera o payload EMV do PIX (BR Code estático), válido para leitura em qualquer app bancário."""
+    """Generates the PIX EMV payload (static BR Code), readable by any banking app."""
     account = _tlv("00", "br.gov.bcb.pix") + _tlv("01", pix_key)
     payload = (
         _tlv("00", "01") + _tlv("26", account) + _tlv("52", "0000") + _tlv("53", "986")
@@ -39,7 +39,7 @@ def brcode(pix_key: str, merchant_name: str, merchant_city: str, amount: Decimal
 
 
 class PixGateway:
-    """Porta para gateways (Asaas, Efí, Mercado Pago...). A implementação padrão gera BR Code estático."""
+    """Port for gateways (Asaas, Efí, Mercado Pago...). The default implementation generates a static BR Code."""
 
     async def create_charge(self, *, invoice_number: str, amount: Decimal, settings: dict) -> dict:
         key = (settings.get("billing") or {}).get("pix_key")
@@ -51,7 +51,7 @@ class PixGateway:
 
 
 class NfseProvider:
-    """Porta de emissão de NFS-e (integração com prefeitura/ERP). Padrão: marca como pendente e emite evento."""
+    """Port for issuing NFS-e (municipal/ERP integration). Default: marks it as pending and emits an event."""
 
     async def request(self, invoice) -> dict:
         return {"status": "pending", "number": None}

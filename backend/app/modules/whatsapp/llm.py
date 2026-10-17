@@ -1,7 +1,7 @@
-"""Camada de IA: resumos de atendimento, classificação de sentimento (NLP) e intenção.
+"""AI layer: conversation summaries, sentiment classification (NLP) and intent.
 
-Usa a API da Anthropic quando ``ANTHROPIC_API_KEY`` está configurada; caso contrário, aplica heurísticas
-determinísticas em português (léxico de sentimento e extração de frases-chave) para que o sistema funcione offline.
+Uses the Anthropic API when ``ANTHROPIC_API_KEY`` is configured; otherwise it applies deterministic
+heuristics in Portuguese (sentiment lexicon and key-phrase extraction) so the system works offline.
 """
 from __future__ import annotations
 
@@ -82,7 +82,7 @@ def _fmt_transcript(messages: list[dict], limit: int = 40) -> str:
 
 
 async def summarize_conversation(messages: list[dict]) -> str:
-    """Resumo curto do atendimento (no handoff bot→humano, transferência ou fechamento)."""
+    """Short conversation summary (on bot→human handoff, transfer or closing)."""
     if not messages:
         return ""
     transcript = _fmt_transcript(messages)
@@ -102,7 +102,7 @@ async def summarize_conversation(messages: list[dict]) -> str:
     return " | ".join(parts)
 
 
-# Intenções do bot: palavras-chave → (intent, peso)
+# Bot intents: keywords → (intent, weight)
 INTENTS: dict[str, list[str]] = {
     "consultoria": ["consultoria", "pop", "procedimento operacional", "padronizacao", "euroflow", "painel", "validacao", "qualidade", "auditoria", "acreditacao", "pncq", "iso 15189", "oms"],
     "apoio_diagnostico": ["laudo", "fcs", "citometria", "imunofenotipagem", "exame", "resultado", "urgente", "amostra", "leucemia", "linfoma", "doenca residual", "dmr", "analise"],

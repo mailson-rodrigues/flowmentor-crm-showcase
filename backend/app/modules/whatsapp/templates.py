@@ -1,4 +1,4 @@
-"""Gerenciamento de templates HSM (Marketing / Utility / Authentication): validação, submissão e status."""
+"""HSM template management (Marketing / Utility / Authentication): validation, submission and status."""
 from __future__ import annotations
 
 import re
@@ -30,7 +30,7 @@ def variables_of(text: str) -> list[int]:
 
 
 def validate_template(name: str, language: str, category: str, components: list[dict], sample_values: dict | None = None) -> dict:
-    """Valida regras da Meta antes de submeter. Retorna {"errors": [...], "warnings": [...]}."""
+    """Validates Meta rules before submitting. Returns {"errors": [...], "warnings": [...]}."""
     errors: list[str] = []
     warnings: list[str] = []
     sample_values = sample_values or {}
@@ -109,7 +109,7 @@ def validate_template(name: str, language: str, category: str, components: list[
             errors.append("No máximo 2 botões de URL.")
         if kinds.count("PHONE_NUMBER") > 1:
             errors.append("No máximo 1 botão de telefone.")
-        # Quick replies devem ficar agrupados (todos antes ou todos depois dos CTAs)
+        # Quick replies must be grouped (all before or all after the CTAs)
         if "QUICK_REPLY" in kinds:
             idx = [i for i, k in enumerate(kinds) if k == "QUICK_REPLY"]
             if idx != list(range(idx[0], idx[0] + len(idx))):
@@ -136,7 +136,7 @@ def validate_template(name: str, language: str, category: str, components: list[
 
 
 def render_template_text(tpl: WaTemplate, values: dict[str, str]) -> str:
-    """Texto final exibido no chat (corpo com variáveis substituídas)."""
+    """Final text shown in the chat (body with variables substituted)."""
     body = next((c for c in tpl.components if c.get("type", "").upper() == "BODY"), {"text": ""})
     text = body.get("text", "")
     header = next((c for c in tpl.components if c.get("type", "").upper() == "HEADER" and c.get("format", "TEXT").upper() == "TEXT"), None)
@@ -147,7 +147,7 @@ def render_template_text(tpl: WaTemplate, values: dict[str, str]) -> str:
 
 
 def render_template_components(tpl: WaTemplate, values: dict[str, str]) -> list[dict]:
-    """Monta ``components`` do envio (parâmetros posicionais) conforme a Cloud API."""
+    """Builds the send ``components`` (positional parameters) according to the Cloud API."""
     comps: list[dict] = []
     body = next((c for c in tpl.components if c.get("type", "").upper() == "BODY"), None)
     if body:
@@ -245,7 +245,7 @@ async def submit(template_id: uuid.UUID, p: Principal = Depends(require("templat
 
 @router.post("/sync")
 async def sync_status(p: Principal = Depends(require("templates:manage")), session: AsyncSession = Depends(get_session)):
-    """Importa/atualiza status dos templates direto da Meta (modo live)."""
+    """Imports/updates template statuses directly from Meta (live mode)."""
     wa = await _account(session, p.org_id, None)
     client = MetaClient(wa.access_token, wa.phone_number_id, wa.waba_id)
     remote = await client.list_templates()
@@ -267,7 +267,7 @@ async def sync_status(p: Principal = Depends(require("templates:manage")), sessi
 
 @router.post("/{template_id}/sandbox-approve")
 async def sandbox_approve(template_id: uuid.UUID, approve: bool = True, p: Principal = Depends(require("templates:manage")), session: AsyncSession = Depends(get_session)):
-    """Somente sandbox: simula a decisão da Meta (webhook message_template_status_update)."""
+    """Sandbox only: simulates Meta's decision (message_template_status_update webhook)."""
     from app.config import settings
 
     if settings.meta_mode != "sandbox":

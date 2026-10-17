@@ -1,4 +1,4 @@
-"""Schema inicial: tabelas do CRM + WhatsApp BSP, mensagens particionadas por mês e auditoria append-only.
+"""Initial schema: CRM + WhatsApp BSP tables, messages partitioned by month, and an append-only audit log.
 
 Revision ID: 0001_initial
 Revises:
@@ -20,9 +20,9 @@ MESSAGE_ENUMS = {
     "message_status": ("received", "queued", "sent", "delivered", "read", "failed"),
 }
 
-# Cada item é UM comando (drivers assíncronos não aceitam múltiplos comandos por chamada).
+# Each item is ONE statement (async drivers do not accept multiple statements per call).
 PG_STATEMENTS = [
-    # --- Mensagens: particionamento por faixa mensal (created_at); PK física = (id, created_at)
+    # --- Messages: monthly range partitioning (created_at); physical PK = (id, created_at)
     """
     CREATE TABLE messages (
         id               UUID        NOT NULL,
@@ -49,7 +49,7 @@ PG_STATEMENTS = [
     "CREATE INDEX idx_messages_ticket_id ON messages (ticket_id, created_at)",
     "CREATE INDEX idx_messages_meta_id ON messages (meta_message_id)",
     "CREATE INDEX ix_messages_organization_id ON messages (organization_id)",
-    # Função que cria partições mensais; é chamada na migração e diariamente pela aplicação (job db.partitions)
+    # Function that creates monthly partitions; called by the migration and daily by the application (db.partitions job)
     """
     CREATE OR REPLACE FUNCTION ensure_message_partitions(months_back INT DEFAULT 1, months_ahead INT DEFAULT 3)
     RETURNS VOID AS $$
@@ -72,7 +72,7 @@ PG_STATEMENTS = [
     $$ LANGUAGE plpgsql
     """,
     "SELECT ensure_message_partitions(1, 6)",
-    # --- Auditoria imutável (append-only)
+    # --- Immutable audit log (append-only)
     """
     CREATE OR REPLACE FUNCTION audit_logs_immutable() RETURNS TRIGGER AS $$
     BEGIN
@@ -89,7 +89,7 @@ def upgrade() -> None:
     bind = op.get_bind()
     tables = Base.metadata.tables
     others = [t for name, t in tables.items() if name != "messages"]
-    Base.metadata.create_all(bind, tables=others)  # ordena por dependência e cria os enums nativos
+    Base.metadata.create_all(bind, tables=others)  # orders by dependency and creates the native enums
     if bind.dialect.name == "postgresql":
         for name, values in MESSAGE_ENUMS.items():
             sa.Enum(*values, name=name).create(bind, checkfirst=True)

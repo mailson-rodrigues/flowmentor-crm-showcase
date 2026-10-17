@@ -1,4 +1,4 @@
-"""Rate limiting por janela deslizante (Redis em produção, memória em dev)."""
+"""Sliding-window rate limiting (Redis in production, memory in dev)."""
 from __future__ import annotations
 
 import time
@@ -17,7 +17,7 @@ class RateLimiter:
             self._redis = aioredis.from_url(settings.redis_url, decode_responses=True)
 
     async def hit(self, key: str, limit: int, window: int = 60) -> tuple[bool, int]:
-        """Retorna (permitido, restantes)."""
+        """Returns (allowed, remaining)."""
         if self._redis is not None:
             try:
                 bucket = f"rl:{key}:{int(time.time() // window)}"
@@ -25,7 +25,7 @@ class RateLimiter:
                 if n == 1:
                     await self._redis.expire(bucket, window + 1)
                 return n <= limit, max(limit - n, 0)
-            except Exception:  # Redis fora do ar não deve derrubar a API (fail-open)
+            except Exception:  # a Redis outage must not take the API down (fail-open)
                 return True, limit
         now = time.monotonic()
         q = self._hits[key]
@@ -34,7 +34,7 @@ class RateLimiter:
         if len(q) >= limit:
             return False, 0
         q.append(now)
-        if len(self._hits) > 50_000:  # proteção de memória
+        if len(self._hits) > 50_000:  # memory protection
             self._hits.clear()
         return True, limit - len(q)
 

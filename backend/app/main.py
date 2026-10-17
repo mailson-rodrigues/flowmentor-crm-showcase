@@ -1,4 +1,4 @@
-"""Aplicação FastAPI + Socket.IO — Flowmentor CRM."""
+"""FastAPI + Socket.IO application — Flowmentor CRM."""
 from __future__ import annotations
 
 import logging
@@ -106,5 +106,5 @@ fastapi_app = create_app()
 
 from app.modules.whatsapp.realtime import sio  # noqa: E402
 
-# ASGI raiz: Socket.IO em /socket.io, restante vai para o FastAPI
+# root ASGI: Socket.IO on /socket.io, everything else goes to FastAPI
 app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app, socketio_path="/socket.io")

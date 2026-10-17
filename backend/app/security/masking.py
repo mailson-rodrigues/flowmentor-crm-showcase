@@ -1,4 +1,4 @@
-"""Mascaramento de dados pessoais (LGPD) para telas, logs e exportações."""
+"""Masking of personal data (LGPD) for screens, logs and exports."""
 from __future__ import annotations
 
 import re
@@ -46,7 +46,7 @@ _RE_PHONE = re.compile(r"(?<!\d)(?:\+?55)?\s?\(?\d{2}\)?\s?9?\d{4}[-\s]?\d{4}(?!
 
 
 def scrub_text(text: str | None) -> str | None:
-    """Remove PII evidente de textos livres (usado em logs e na anonimização)."""
+    """Removes obvious PII from free text (used in logs and in anonymization)."""
     if not text:
         return text
     text = _RE_CNPJ.sub("[CNPJ]", text)

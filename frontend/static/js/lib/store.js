@@ -1,4 +1,4 @@
-// Estado global leve: sessão, permissões e tema.
+// Lightweight global state: session, permissions and theme.
 export const state = { user: null, permissions: new Set(), meta: null };
 const listeners = new Set();
 

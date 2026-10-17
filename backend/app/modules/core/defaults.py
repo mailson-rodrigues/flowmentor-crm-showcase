@@ -1,4 +1,4 @@
-"""Configurações padrão da organização (merge profundo com org.settings)."""
+"""Default organization settings (deep merge with org.settings)."""
 from __future__ import annotations
 
 import copy

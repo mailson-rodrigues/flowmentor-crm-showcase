@@ -1,4 +1,4 @@
-"""Manutenção de partições mensais da tabela ``messages`` (PostgreSQL)."""
+"""Maintenance of the monthly partitions of the ``messages`` table (PostgreSQL)."""
 from __future__ import annotations
 
 import logging

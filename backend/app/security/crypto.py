@@ -1,11 +1,11 @@
-"""Envelope Encryption (AES-256-GCM) com chave de criptografia de dados (DEK) por valor.
+"""Envelope Encryption (AES-256-GCM) with a per-value data-encryption key (DEK).
 
-Formato armazenado:  ``enc:v1:<kid>:<b64(wrapped_dek)>:<b64(nonce)>:<b64(ciphertext)>``
+Stored format:  ``enc:v1:<kid>:<b64(wrapped_dek)>:<b64(nonce)>:<b64(ciphertext)>``
 
-* Cada valor recebe uma DEK aleatória própria; a DEK é "embrulhada" (AES-GCM) pela KEK ativa.
-* A KEK pode ser rotacionada: novas gravações usam a primeira chave de ``KEK_KEYS``; chaves
-  antigas continuam válidas para decifrar até a re-criptografia (``rewrap``).
-* Em produção a KEK deve vir de um KMS (AWS KMS / GCP KMS / Vault). ``KeyProvider`` é a porta.
+* Each value gets its own random DEK; the DEK is wrapped (AES-GCM) by the active KEK.
+* The KEK can be rotated: new writes use the first key of ``KEK_KEYS``; old
+  keys remain valid for decryption until re-encryption (``rewrap``).
+* In production the KEK should come from a KMS (AWS KMS / GCP KMS / Vault). ``KeyProvider`` is the port.
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def _b64d(s: str) -> bytes:
 
 @dataclass(frozen=True)
 class KeyProvider:
-    """Porta para obtenção das KEKs. Implementação padrão lê variáveis de ambiente."""
+    """Port for obtaining the KEKs. The default implementation reads environment variables."""
 
     keys: dict[str, bytes]
     active_kid: str
@@ -53,7 +53,7 @@ class KeyProvider:
                 if i == 0:
                     active = kid
         else:
-            # Derivação determinística a partir de SECRET_KEY: aceitável apenas em dev/test.
+            # Deterministic derivation from SECRET_KEY: acceptable only in dev/test.
             keys["dev"] = hashlib.sha256(("kek|" + settings.secret_key).encode()).digest()
             active = "dev"
         return cls(keys=keys, active_kid=active)
@@ -95,7 +95,7 @@ def decrypt(token: str | None, aad: bytes = b"") -> str | None:
     if token is None:
         return None
     if not is_encrypted(token):
-        return token  # legado/plaintext (migração gradual)
+        return token  # legacy/plaintext (gradual migration)
     _, _, kid, wrapped_b64, nonce_b64, ct_b64 = token.split(":")
     kek = provider().keys.get(kid)
     if kek is None:
@@ -106,13 +106,13 @@ def decrypt(token: str | None, aad: bytes = b"") -> str | None:
 
 
 def rewrap(token: str) -> str:
-    """Re-criptografa com a KEK ativa (rotação de chaves)."""
+    """Re-encrypts with the active KEK (key rotation)."""
     plain = decrypt(token)
     return encrypt(plain) if plain is not None else token
 
 
 def blind_index(value: str | None, purpose: str = "generic") -> str | None:
-    """HMAC determinístico para busca/unique de campos cifrados (ex.: CNPJ) sem expor o valor."""
+    """Deterministic HMAC for searching/unique constraints on encrypted fields (e.g. CNPJ) without exposing the value."""
     if value is None:
         return None
     key = hashlib.sha256(("bidx|" + settings.secret_key).encode()).digest()
@@ -120,7 +120,7 @@ def blind_index(value: str | None, purpose: str = "generic") -> str | None:
 
 
 class EncryptedString(sa.types.TypeDecorator):
-    """Coluna cifrada em nível de aplicação (envelope encryption). Transparente para o ORM."""
+    """Application-level encrypted column (envelope encryption). Transparent to the ORM."""
 
     impl = sa.Text
     cache_ok = True

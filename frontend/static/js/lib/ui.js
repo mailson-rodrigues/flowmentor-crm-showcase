@@ -1,4 +1,4 @@
-// Kit de componentes: toast, modal, drawer, formulários, tabelas, abas, menus.
+// Component kit: toast, modal, drawer, forms, tables, tabs, menus.
 import { h, icon, mount, clear } from "./dom.js";
 
 // ---------- Toasts ----------
@@ -63,7 +63,7 @@ export function promptDialog({ title, label, placeholder = "", multiline = true,
   });
 }
 
-// ---------- Formulários ----------
+// ---------- Forms ----------
 let fieldSeq = 0;
 export function form(fields, values = {}) {
   const inputs = {};

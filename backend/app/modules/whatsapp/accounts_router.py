@@ -1,4 +1,4 @@
-"""Contas WhatsApp (WABA): Embedded Signup, conexão manual, health, rotação de tokens e simulador sandbox."""
+"""WhatsApp accounts (WABA): Embedded Signup, manual connection, health, token rotation and sandbox simulator."""
 from __future__ import annotations
 
 import time
@@ -30,13 +30,13 @@ PUBLIC_FIELDS = ["id", "label", "waba_id", "phone_number_id", "display_phone_num
 
 def account_out(a: WhatsAppAccount) -> dict:
     d = row(a, PUBLIC_FIELDS)
-    d["token_set"] = bool(a.access_token)  # o token jamais é devolvido pela API
+    d["token_set"] = bool(a.access_token)  # the token is never returned by the API
     return d
 
 
 @router.get("/signup/config")
 async def signup_config(p: Principal = Depends(require("whatsapp:manage"))):
-    """Parâmetros públicos para o Facebook Login SDK (Embedded Signup)."""
+    """Public parameters for the Facebook Login SDK (Embedded Signup)."""
     return {"app_id": settings.meta_app_id, "config_id": settings.meta_embedded_signup_config_id, "graph_version": settings.meta_graph_version, "mode": settings.meta_mode,
             "webhook_url": f"{settings.public_base_url.rstrip('/')}/webhooks/whatsapp", "verify_token_hint": "Definido em META_WEBHOOK_VERIFY_TOKEN"}
 
@@ -52,7 +52,7 @@ class SignupCompleteIn(BaseModel):
 
 @router.post("/signup/complete", status_code=201)
 async def signup_complete(body: SignupCompleteIn, request: Request, p: Principal = Depends(require("whatsapp:manage")), session: AsyncSession = Depends(get_session)):
-    """Conclui o Embedded Signup: troca o code por token, assina webhooks, registra o número e guarda o token cifrado."""
+    """Completes Embedded Signup: exchanges the code for a token, subscribes webhooks, registers the number and stores the encrypted token."""
     client = MetaClient()
     try:
         tok = await client.exchange_code(body.code)
@@ -167,7 +167,7 @@ async def disconnect(account_id: uuid.UUID, request: Request, p: Principal = Dep
 
 
 async def rotate_account_token(a: WhatsAppAccount) -> None:
-    """Renovação programada: troca por token de longa duração e grava o novo token cifrado (rotação de credenciais)."""
+    """Scheduled renewal: exchanges for a long-lived token and stores the new encrypted token (credential rotation)."""
     if not a.access_token:
         return
     res = await MetaClient().exchange_long_lived(a.access_token)
@@ -191,7 +191,7 @@ async def scheduled_token_rotation() -> None:
                 emit(s, "whatsapp.token_error", a.organization_id, {"account_id": str(a.id), "error": a.last_error})
 
 
-# ------------------------------------------------------------------ Simulador (apenas sandbox)
+# ------------------------------------------------------------------ Simulator (sandbox only)
 class SimulateIn(BaseModel):
     from_number: str = Field(min_length=8, max_length=20)
     name: str | None = "Contato Teste"
@@ -203,7 +203,7 @@ class SimulateIn(BaseModel):
 
 @router.post("/sandbox/simulate-inbound")
 async def simulate_inbound(body: SimulateIn, p: Principal = Depends(require("whatsapp:manage")), session: AsyncSession = Depends(get_session)):
-    """Injeta no pipeline real um webhook idêntico ao da Meta (somente sandbox) — ideal para demos e testes."""
+    """Injects into the real pipeline a webhook identical to Meta's (sandbox only) — ideal for demos and tests."""
     if settings.meta_mode != "sandbox":
         raise AppError(403, "not_sandbox", "Disponível apenas em modo sandbox")
     wa = (await session.execute(sa.select(WhatsAppAccount).where(WhatsAppAccount.organization_id == p.org_id, WhatsAppAccount.status == "active").limit(1))).scalar_one_or_none()

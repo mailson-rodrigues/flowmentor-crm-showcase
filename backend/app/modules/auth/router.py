@@ -1,4 +1,4 @@
-"""Autenticação: login com lockout, refresh com rotação, logout, perfil e presença do agente."""
+"""Authentication: login with lockout, refresh with rotation, logout, profile and agent presence."""
 from __future__ import annotations
 
 from datetime import timedelta
@@ -61,7 +61,7 @@ async def login(body: LoginIn, request: Request, session: AsyncSession = Depends
     user = (await session.execute(sa.select(User).where(sa.func.lower(User.email) == body.email.lower()))).scalar_one_or_none()
     generic = AppError(401, "invalid_credentials", "E-mail ou senha inválidos")
     if not user or not user.password_hash or not user.is_active:
-        # custo constante para não vazar existência da conta
+        # constant cost so the existence of the account is not leaked
         verify_password(body.password, hash_password("dummy-password"))
         raise generic
     now = utcnow()
@@ -74,7 +74,7 @@ async def login(body: LoginIn, request: Request, session: AsyncSession = Depends
             user.failed_logins = 0
         await audit.log_action(session, org_id=user.organization_id, action="LOGIN_FAILED", resource_type="users", resource_id=user.id,
                                actor_user_id=user.id, request=request)
-        await session.commit()  # persiste o contador mesmo respondendo erro
+        await session.commit()  # persist the counter even when answering with an error
         raise generic
     user.failed_logins, user.locked_until, user.last_login_at = 0, None, now
     if needs_rehash(user.password_hash):
@@ -90,7 +90,7 @@ async def refresh(body: RefreshIn, request: Request, session: AsyncSession = Dep
     if not tok:
         raise AppError(401, "invalid_refresh", "Sessão inválida")
     if tok.revoked_at is not None:
-        # reutilização de refresh token rotacionado ⇒ possível roubo: revoga toda a família do usuário
+        # reuse of a rotated refresh token => possible theft: revoke the whole family of the user
         await session.execute(sa.update(RefreshToken).where(RefreshToken.user_id == tok.user_id, RefreshToken.revoked_at.is_(None)).values(revoked_at=utcnow()))
         await session.commit()
         raise AppError(401, "refresh_reuse", "Sessão inválida")

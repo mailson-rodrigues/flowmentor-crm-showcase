@@ -1,4 +1,4 @@
-"""Mídias: download seguro da Meta → bucket (S3/GCS/FS) → URL assinada com expiração. Nada de binário no banco."""
+"""Media: secure download from Meta → bucket (S3/GCS/FS) → signed URL with expiry. No binaries in the database."""
 from __future__ import annotations
 
 import hashlib
@@ -58,14 +58,14 @@ def asset_url(asset: MediaAsset, ttl: int | None = None) -> str:
 
 
 def public_asset_url(asset: MediaAsset, ttl: int = 3600) -> str:
-    """URL absoluta (a Meta precisa alcançar o arquivo para enviar mídia por link)."""
+    """Absolute URL (Meta needs to reach the file in order to send media by link)."""
     url = asset_url(asset, ttl)
     return url if url.startswith("http") else settings.public_base_url.rstrip("/") + url
 
 
 @router.get("/api/v1/media/{asset_id}/url")
 async def media_url(asset_id: uuid.UUID, p: Principal = Depends(get_principal), session: AsyncSession = Depends(get_session)):
-    """Gera URL assinada de curta duração (checa ABAC do ticket de origem)."""
+    """Generates a short-lived signed URL (checks ABAC of the originating ticket)."""
     a = await session.get(MediaAsset, asset_id)
     if not a or a.organization_id != p.org_id or a.deleted_at:
         raise not_found("Mídia")
@@ -96,7 +96,7 @@ async def serve_local_media(key: str, exp: int = Query(...), sig: str = Query(..
 
 
 async def purge_expired_media() -> int:
-    """Retenção: remove binários mais antigos que ``media_retention_days`` (mantém metadados para auditoria)."""
+    """Retention: removes binaries older than ``media_retention_days`` (keeps metadata for audit)."""
     cutoff = utcnow() - timedelta(days=settings.media_retention_days)
     n = 0
     async with session_scope() as s:

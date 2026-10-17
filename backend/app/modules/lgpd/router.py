@@ -1,4 +1,4 @@
-"""LGPD: consentimentos, direitos do titular (arts. 18 e 19), anonimização/exclusão, trilha de auditoria."""
+"""LGPD: consents, data-subject rights (arts. 18 and 19), anonymization/deletion, audit trail."""
 from __future__ import annotations
 
 import csv
@@ -36,7 +36,7 @@ REQUEST_TYPES = {
 }
 
 
-# ------------------------------------------------------------------ Serviços
+# ------------------------------------------------------------------ Services
 async def export_subject_data(session: AsyncSession, org_id: uuid.UUID, contact: Contact, max_messages: int = 5000) -> dict:
     tickets = (await session.execute(sa.select(Ticket).where(Ticket.organization_id == org_id, Ticket.contact_id == contact.id).order_by(Ticket.created_at))).scalars().all()
     tids = [t.id for t in tickets]
@@ -54,7 +54,7 @@ async def export_subject_data(session: AsyncSession, org_id: uuid.UUID, contact:
 
 
 async def anonymize_contact(session: AsyncSession, org_id: uuid.UUID, contact: Contact) -> dict:
-    """Redação irreversível: preserva métricas/estatísticas, remove qualquer dado que identifique o titular."""
+    """Irreversible redaction: preserves metrics/statistics, removes any data that identifies the data subject."""
     if contact.anonymized_at:
         return {"already": True}
     tids = list((await session.execute(sa.select(Ticket.id).where(Ticket.organization_id == org_id, Ticket.contact_id == contact.id))).scalars().all())
@@ -83,7 +83,7 @@ async def anonymize_contact(session: AsyncSession, org_id: uuid.UUID, contact: C
 
 
 async def delete_conversations(session: AsyncSession, org_id: uuid.UUID, contact: Contact) -> dict:
-    """Direito ao esquecimento: elimina todo o histórico de conversas do titular (a trilha de auditoria permanece)."""
+    """Right to erasure: deletes the whole conversation history of the data subject (the audit trail remains)."""
     tids = list((await session.execute(sa.select(Ticket.id).where(Ticket.organization_id == org_id, Ticket.contact_id == contact.id))).scalars().all())
     deleted = {"tickets": len(tids), "messages": 0}
     if tids:
@@ -141,7 +141,7 @@ async def revoke_consent(consent_id: uuid.UUID, request: Request, p: Principal =
     return {"revoked_at": plain(x.revoked_at)}
 
 
-# ------------------------------------------------------------------ Direitos do titular
+# ------------------------------------------------------------------ Data-subject rights
 class DsrIn(BaseModel):
     contact_id: uuid.UUID | None = None
     wa_id: str | None = None
@@ -149,7 +149,7 @@ class DsrIn(BaseModel):
     requester_name: str | None = None
     requester_contact: str | None = None
     details: str | None = None
-    changes: dict | None = None  # retificação: {"name": "...", "email": "..."}
+    changes: dict | None = None  # rectification: {"name": "...", "email": "..."}
 
 
 def dsr_out(r: DataSubjectRequest) -> dict:
@@ -199,7 +199,7 @@ async def list_requests(status: str | None = None, p: Principal = Depends(requir
 
 @router.post("/requests/{request_id}/process")
 async def process_request(request_id: uuid.UUID, request: Request, p: Principal = Depends(require("lgpd:manage")), session: AsyncSession = Depends(get_session)):
-    """Executa a solicitação conforme o tipo (rotina automatizada dos arts. 18/19)."""
+    """Executes the request according to its type (automated routine for arts. 18/19)."""
     r = await session.get(DataSubjectRequest, request_id)
     if not r or r.organization_id != p.org_id:
         raise not_found("Solicitação")

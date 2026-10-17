@@ -1,4 +1,4 @@
-"""LGPD (consentimentos, solicitações do titular) e trilha de auditoria imutável (append-only)."""
+"""LGPD (consents, data-subject requests) and immutable (append-only) audit trail."""
 from __future__ import annotations
 
 import uuid
@@ -24,7 +24,7 @@ class LgpdConsent(UUIDPk, Base):
 
 
 class DataSubjectRequest(UUIDPk, Base):
-    """Direitos do titular — LGPD arts. 18 e 19."""
+    """Data-subject rights — LGPD arts. 18 and 19."""
 
     __tablename__ = "data_subject_requests"
 
@@ -43,7 +43,7 @@ class DataSubjectRequest(UUIDPk, Base):
 
 
 class AuditLog(UUIDPk, Base):
-    """Append-only. Triggers no PostgreSQL bloqueiam UPDATE/DELETE; cadeia de hashes detecta adulteração."""
+    """Append-only. PostgreSQL triggers block UPDATE/DELETE; the hash chain detects tampering."""
 
     __tablename__ = "audit_logs"
     __table_args__ = (
@@ -53,7 +53,7 @@ class AuditLog(UUIDPk, Base):
     )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, nullable=False)
-    seq: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)  # sequência por organização
+    seq: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)  # per-organization sequence
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(sa.Uuid)
     action: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     resource_type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
